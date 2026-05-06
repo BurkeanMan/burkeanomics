@@ -5,7 +5,7 @@ import pandas as pd
 st.set_page_config(page_title="Burkeanomics Calculator", layout="wide", initial_sidebar_state="expanded")
 
 st.title("🧠 Burkeanomics Calculator")
-st.caption("Burkeanomics Calculator **d1.70** | All Settings Visible + Dynamic | Based on 302 charts")
+st.caption("Burkeanomics Calculator **d1.71** | All Settings Visible + Dynamic | Based on 302 charts")
 
 # ====================== RESET ======================
 st.sidebar.header("⚙️ Settings")
@@ -135,7 +135,7 @@ with st.sidebar.expander("**👥 Nucleons per Electron**", expanded=False):
         st.number_input("Providers", 55, step=1, key="pop_p_d")
         st.number_input("SinSayers", 15, step=1, key="pop_s_d")
 
-with st.sidebar.expander("**🌐 Constants**", expanded=True):
+with st.sidebar.expander("**🌐 Constants**", expanded=False):
     households = st.number_input("California Households (Electrons)", 13970000, step=10000, key="households")
     energy = st.number_input("Per Capita Energy Spend ($)", 6378, step=10, key="energy")
     base_iq = st.number_input("Base IQ", 100, step=1, key="base_iq")
