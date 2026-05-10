@@ -5,7 +5,16 @@ import pandas as pd
 st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="expanded")
 
 st.title("🧠 Burkeanomics Simulator")
-st.caption("Burkeanomics Simulator **d1.89** | All Settings Visible + Dynamic | Based on 302 charts")
+_ver_col, _ref_col = st.columns([2, 3])
+with _ver_col:
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d1.89</p>", unsafe_allow_html=True)
+with _ref_col:
+    with st.expander("References"):
+        st.markdown(
+            "• [Bcon 300 — Burkean Economics](https://www.bnation.us/econ-300-burkean-economics)  \n"
+            "• [Bcon 301 — Particle Physics Model of Socionomic Systems](https://www.bnation.us/econ-301)  \n"
+            "• [Bcon 302 — BrainPower Charts](https://www.bnation.us/302-bp-charts)"
+        )
 
 # ====================== DEFAULTS ======================
 if "universe_name" not in st.session_state:
@@ -21,17 +30,6 @@ if st.sidebar.button("🔄 Reset Settings", help="Reset ALL settings to defaults
     st.rerun()
 
 # ====================== SIDEBAR ======================
-with st.sidebar.expander("**📉 Electron Throttling Factor**", expanded=False):
-    col = st.columns(3)
-    with col[0]:
-        st.caption("**cCon Left**")
-        st.slider(" ", 0.0, 1.0, 0.75, 0.01, key="th_ccon")
-    with col[1]:
-        st.caption("**Center**")
-        st.slider(" ", 0.0, 1.0, 0.50, 0.01, key="th_center")
-    with col[2]:
-        st.caption("**dCon Right**")
-        st.slider(" ", 0.0, 1.0, 0.25, 0.01, key="th_dcon")
 
 with st.sidebar.expander("**📊 Per Capita Power Scaling**", expanded=False):
     st.caption("Multiplier vs Center anchor (Center = 1.0)")
@@ -144,7 +142,7 @@ with st.sidebar.expander("**🏷️ Metadata**", expanded=False):
 
 # ====================== CALCULATIONS ======================
 def calculate_per_capita(scen: str):
-    th = st.session_state.get("th_ccon" if "cCon" in scen else "th_center" if "Center" in scen else "th_dcon", 0.5)
+    th = st.session_state.get("th_ccon" if "cCon" in scen else "th_center" if "Center" in scen else "th_dcon", 50) / 100
     suffix = "c" if "cCon" in scen else "center" if "Center" in scen else "d"
     base = st.session_state.get("base_iq", 100)
     energy = st.session_state.get("energy", 6378)
@@ -228,8 +226,19 @@ _FOOTER_ANNOTATION = dict(
 )
 
 _universe = st.session_state.get("universe_name", "").strip()
-st.subheader(f"Health & Wealth of the {_universe}" if _universe else "Health & Wealth of the [Universe]")
-st.caption("Total BrainPower")
+st.header(f"Health & Wealth of the {_universe}" if _universe else "Health & Wealth of the [Universe]")
+st.markdown("<style>section[data-testid='stMain'] details summary p { font-weight:600; font-size:0.95rem; }</style>", unsafe_allow_html=True)
+
+with st.expander("Electron Throttles", expanded=True):
+    st.markdown("<style>div.stSlider > label { display:block; text-align:center; width:100%; }</style>", unsafe_allow_html=True)
+    _et_l, _et_c, _et_r = st.columns(3)
+    with _et_l:
+        st.slider("Left · cCon", 0, 100, 75, 1, format="%d%%", key="th_ccon")
+    with _et_c:
+        st.slider("Center", 0, 100, 50, 1, format="%d%%", key="th_center")
+    with _et_r:
+        st.slider("Right · dCon", 0, 100, 25, 1, format="%d%%", key="th_dcon")
+
 compare_df = pd.DataFrame([
     {"Scenario": label, "Total tBP (Trillions Smart $)": calculate_breakdown(scen)[1]}
     for scen, label in SCENARIOS
@@ -248,17 +257,17 @@ _desc_color = "white" if _is_dark else "#555555"  # case description headers
 
 # Arc start/end points — just above bar value labels
 _lv_y, _cv_y, _rv_y = _lv + 1.5, _cv + 1.5, _rv + 1.5
-# Peaks — tall enough for acute entry/exit angles at each bar
-_peak_lc = max(_lv_y, _cv_y) + 2.2
-_peak_cr = max(_cv_y, _rv_y) + 2.2
-_peak_lr = max(_lv_y, _cv_y, _rv_y) + 3.8
+# Peaks — halved from original to reduce arc height
+_peak_lc = max(_lv_y, _cv_y) + 1.1
+_peak_cr = max(_cv_y, _rv_y) + 1.1
+_peak_lr = max(_lv_y, _cv_y, _rv_y) + 1.9
 _y_min = round(min(_totals) - 2)
-_y_max = round(max(_totals) + 5.5)  # headroom for arc peaks + labels
+_y_max = round(max(_totals) + 4.0)  # headroom for arc peaks + labels
 
 # Case description headers — dynamic from throttle settings
-_th_c   = st.session_state.get("th_ccon",   0.75)
-_th_ctr = st.session_state.get("th_center", 0.50)
-_th_d   = st.session_state.get("th_dcon",   0.25)
+_th_c   = st.session_state.get("th_ccon",   75) / 100
+_th_ctr = st.session_state.get("th_center", 50) / 100
+_th_d   = st.session_state.get("th_dcon",   25) / 100
 
 def _case_hdr(th, is_dcon=False):
     pct = round(th * 100)
@@ -271,7 +280,7 @@ _tick_labels = ["Left<br>cCon", "Center", "Right<br>dCon"]
 _xaxis_cfg = dict(title="", ticktext=_tick_labels, tickvals=["Left", "Center", "Right"])
 
 fig_main = px.bar(compare_df, x="Scenario", y="Total tBP (Trillions Smart $)",
-                  color="Scenario", color_discrete_map={"Left": "#1f77b4", "Center": "#87ceeb", "Right": "#d62728"})
+                  color="Scenario", color_discrete_map={"Left": "#1f77b4", "Center": "#888888", "Right": "#d62728"})
 fig_main.update_traces(texttemplate="")   # labels via annotations for dark-mode safety
 fig_main.update_layout(height=520, bargap=0.25, showlegend=False,
                        xaxis=_xaxis_cfg, yaxis=dict(range=[_y_min, _y_max]),
@@ -280,7 +289,7 @@ fig_main.update_layout(height=520, bargap=0.25, showlegend=False,
 # Bar value labels — no box, theme-aware color
 for label_col, total in zip(["Left", "Center", "Right"], list(_totals)):
     fig_main.add_annotation(x=label_col, y=total, xref="x", yref="y",
-        text=f"<b>{total:.1f}T</b>", showarrow=False,
+        text=f"<b>S${total:.1f}T</b>", showarrow=False,
         yanchor="bottom", yshift=6, font=dict(size=15, color=_val_color))
 
 # Case description headers above plot area
@@ -301,14 +310,15 @@ def _add_arc(fig, x0, y0, x1, y1, peak, cx_inset, pct_label, label_x, ac):
         text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowcolor=ac)
     fig.add_annotation(x=label_x, y=peak, xref="x", yref="y",
         text=f"<b>+{pct_label}%</b>", showarrow=False,
-        font=dict(color=ac, size=13), yanchor="top")
+        font=dict(color=ac, size=13), yanchor="top", yshift=-10)
 
 _add_arc(fig_main, 0, _lv_y, 1, _cv_y, _peak_lc, 0.12, _pct_lc, 0.5, _ac)
-_add_arc(fig_main, 1, _cv_y, 2, _rv_y, _peak_cr, 0.12, _pct_cr, 1.5, _ac)
+_add_arc(fig_main, 1, _cv_y, 2, _rv_y, _peak_cr, 0.12, _pct_cr, 1.7, _ac)
 _add_arc(fig_main, 0, _lv_y, 2, _rv_y, _peak_lr, 0.18, _pct_lr, 1.0, _ac)
 
 fig_main.add_annotation(**_FOOTER_ANNOTATION)
-st.plotly_chart(fig_main, use_container_width=True)
+with st.expander("Total BrainPower", expanded=True):
+    st.plotly_chart(fig_main, use_container_width=True)
 
 stack_data = []
 for scen, label in SCENARIOS:
@@ -320,16 +330,16 @@ _y_max_stack = round(max(_totals) + 3)
 fig_stacked = px.bar(stack_df, x="Scenario", y="tBP", color="Class", text="Label",
                      category_orders={"Class": ["SinSayers", "GovNukes", "Providers", "Electrons"]},
                      color_discrete_sequence=["#8B0000", "#FFD700", "#228B22", "#00008B"])
-fig_stacked.update_traces(texttemplate="%{text}", textposition="inside",
+fig_stacked.update_traces(texttemplate="%{text}<br>S$%{y:.1f}T", textposition="inside",
                           textfont=dict(size=12, color="white", weight="bold"))
 for trace in fig_stacked.data:
     if trace.name == "GovNukes":
         trace.textfont.color = "#8B0000"
     if trace.name in ["GovNukes", "Providers", "SinSayers"]:
         _nuke_bg = {"GovNukes": "#FFD700", "Providers": "#228B22", "SinSayers": "#8B0000"}
-        trace.marker.pattern.shape = "/"
+        trace.marker.pattern.shape = "x"
         trace.marker.pattern.bgcolor = _nuke_bg[trace.name]
-        trace.marker.pattern.fgcolor = "rgba(255,255,255,0.20)"
+        trace.marker.pattern.fgcolor = "rgba(0,0,0,0.12)" if trace.name == "GovNukes" else "rgba(255,255,255,0.32)"
         trace.marker.pattern.size = 8
 fig_stacked.update_layout(height=520, barmode="stack", showlegend=False,
                           uniformtext=dict(minsize=8, mode="hide"),
@@ -338,56 +348,57 @@ fig_stacked.update_layout(height=520, barmode="stack", showlegend=False,
 for _, (scen, label) in enumerate(SCENARIOS):
     _, total = calculate_breakdown(scen)
     fig_stacked.add_annotation(x=label, y=total, xref="x", yref="y",
-        text=f"<b>{total:.1f}T</b>", showarrow=False,
+        text=f"<b>S${total:.1f}T</b>", showarrow=False,
         yanchor="bottom", yshift=6, font=dict(size=15, color=_val_color), align="center")
 for (_, label), hdr in zip(SCENARIOS, _case_hdrs):
     fig_stacked.add_annotation(x=label, y=1.03, xref="x", yref="paper",
         text=hdr, showarrow=False, yanchor="bottom",
         font=dict(size=11, color=_desc_color), align="center")
 fig_stacked.add_annotation(**_FOOTER_ANNOTATION)
-st.plotly_chart(fig_stacked, use_container_width=True)
+with st.expander("BrainPower by Class", expanded=True):
+    st.plotly_chart(fig_stacked, use_container_width=True)
 
 # ====================== TABLES ======================
-st.subheader("Per Capita Brains & Power")
-col_l, col_c, col_r = st.columns(3)
-for col, (scen, label) in zip([col_l, col_c, col_r], SCENARIOS):
-    with col:
-        st.markdown(f"**{label}**")
-        df = calculate_per_capita(scen)
-        st.dataframe(
-            df.style.format({"IQ": "{:,.0f}", "Power ($)": "${:,.0f}"})
-                 .set_properties(**{"text-align": "right"}),
-            use_container_width=True,
-            hide_index=True
-        )
+with st.expander("Per Capita Brains & Power", expanded=False):
+    col_l, col_c, col_r = st.columns(3)
+    for col, (scen, label) in zip([col_l, col_c, col_r], SCENARIOS):
+        with col:
+            st.markdown(f"**{label}**")
+            df = calculate_per_capita(scen)
+            st.dataframe(
+                df.style.format({"IQ": "{:,.0f}", "Power ($)": "${:,.0f}"})
+                     .set_properties(**{"text-align": "right"}),
+                use_container_width=True,
+                hide_index=True
+            )
 
-st.subheader("En Masse Brains & Power")
-col_l, col_c, col_r = st.columns(3)
-for col, (scen, label) in zip([col_l, col_c, col_r], SCENARIOS):
-    with col:
-        st.markdown(f"**{label}**")
-        dfm = calculate_en_masse(scen)
-        def safe_format(x):
-            return f"{x:,.0f}" if isinstance(x, (int, float)) else x
-        styled = dfm.style.format({"Total IQ": safe_format, "Power (Billions)": "${:,.0f}"})
-        styled = styled.set_properties(**{"text-align": "right"})
-        st.dataframe(styled, use_container_width=True, hide_index=True)
+with st.expander("En Masse Brains & Power", expanded=False):
+    col_l, col_c, col_r = st.columns(3)
+    for col, (scen, label) in zip([col_l, col_c, col_r], SCENARIOS):
+        with col:
+            st.markdown(f"**{label}**")
+            dfm = calculate_en_masse(scen)
+            def safe_format(x):
+                return f"{x:,.0f}" if isinstance(x, (int, float)) else x
+            styled = dfm.style.format({"Total IQ": safe_format, "Power (Billions)": "${:,.0f}"})
+            styled = styled.set_properties(**{"text-align": "right"})
+            st.dataframe(styled, use_container_width=True, hide_index=True)
 
-st.subheader("BrainPower by Class")
-col_l, col_c, col_r = st.columns(3)
-for col, (scen, label) in zip([col_l, col_c, col_r], SCENARIOS):
-    with col:
-        st.markdown(f"**{label}**")
-        df_bp, total_bp = calculate_breakdown(scen)
-        df_display = df_bp.rename(columns={"tBP": "BrainPower (T$)"})
-        total_row = pd.DataFrame([{"Class": "Total", "BrainPower (T$)": total_bp}])
-        df_display = pd.concat([df_display, total_row], ignore_index=True)
-        st.dataframe(
-            df_display.style.format({"BrainPower (T$)": "{:.1f}"})
-                .set_properties(**{"text-align": "right"}),
-            use_container_width=True,
-            hide_index=True
-        )
+with st.expander("BrainPower by Class", expanded=False):
+    col_l, col_c, col_r = st.columns(3)
+    for col, (scen, label) in zip([col_l, col_c, col_r], SCENARIOS):
+        with col:
+            st.markdown(f"**{label}**")
+            df_bp, total_bp = calculate_breakdown(scen)
+            df_display = df_bp.rename(columns={"tBP": "BrainPower (T$)"})
+            total_row = pd.DataFrame([{"Class": "Total", "BrainPower (T$)": total_bp}])
+            df_display = pd.concat([df_display, total_row], ignore_index=True)
+            st.dataframe(
+                df_display.style.format({"BrainPower (T$)": "{:.1f}"})
+                    .set_properties(**{"text-align": "right"}),
+                use_container_width=True,
+                hide_index=True
+            )
 
 footer = "© 2026 David Burkean • All Rights Reserved • Credited Sharing Encouraged"
 st.markdown(f"<div style='text-align: center; color: #666; padding: 20px 0; font-size: 0.9em; border-top: 1px solid #ddd;'>{footer}</div>", unsafe_allow_html=True)
