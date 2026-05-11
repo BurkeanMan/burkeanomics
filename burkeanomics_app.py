@@ -67,7 +67,7 @@ with st.sidebar.expander("**👥 Nucleons per Electron**", expanded=False):
         st.number_input("SinSayers", 15, step=1, key="pop_s_d")
 
 with st.sidebar.expander("**🧬 Per Capita Nucleon Brains**", expanded=False):
-    st.caption("Raw intelligence inputs per entity")
+    st.caption("Intelligence inputs per entity")
     st.markdown("**GovNukes**")
     gcols = st.columns(3)
     with gcols[0]:
