@@ -110,19 +110,19 @@ with st.sidebar.expander("**📊 Per Capita Scaling**", expanded=False):
     bq1, bq2, bq3 = st.columns(3)
     with bq1:
         _ch("cCon Left")
-        st.number_input("Electrons", value=1.10, step=0.05, key="iq_e_c")
+        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_c")
         st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_c")
         st.number_input("Providers", value=1.00, step=0.05, key="iq_p_c")
         st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_c")
     with bq2:
         _ch("Center")
-        st.number_input("Electrons", value=1.50, step=0.05, key="iq_e_center")
+        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_center")
         st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_center")
         st.number_input("Providers", value=1.00, step=0.05, key="iq_p_center")
         st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_center")
     with bq3:
         _ch("dCon Right")
-        st.number_input("Electrons", value=1.80, step=0.05, key="iq_e_d")
+        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_d")
         st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_d")
         st.number_input("Providers", value=1.00, step=0.05, key="iq_p_d")
         st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_d")
