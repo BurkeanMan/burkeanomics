@@ -21,7 +21,7 @@ if "universe_name" not in st.session_state:
     st.session_state["universe_name"] = "Cal Energy Economy"
 
 # ====================== RESET ======================
-st.sidebar.header("⚙️ Settings")
+st.sidebar.header("⚙️ Parameters")
 st.sidebar.checkbox("🌙 Dark Mode", key="dark_mode", value=False)
 if st.sidebar.button("🔄 Reset Settings", help="Reset ALL settings to defaults"):
     for key in list(st.session_state.keys()):
@@ -31,23 +31,25 @@ if st.sidebar.button("🔄 Reset Settings", help="Reset ALL settings to defaults
 
 # ====================== SIDEBAR ======================
 
+_ch = lambda t: st.markdown(f"<p style='text-align:center;font-size:0.8rem;font-weight:600;color:#888;margin:0 0 4px 0'>{t}</p>", unsafe_allow_html=True)
+
 with st.sidebar.expander("**📊 Per Capita Scaling**", expanded=False):
     st.markdown("**Brains** — IQ multiplier per class")
     bq1, bq2, bq3 = st.columns(3)
     with bq1:
-        st.caption("**cCon Left**")
+        _ch("cCon Left")
         st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_c")
         st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_c")
         st.number_input("Providers", value=1.00, step=0.05, key="iq_p_c")
         st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_c")
     with bq2:
-        st.caption("**Center**")
+        _ch("Center")
         st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_center")
         st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_center")
         st.number_input("Providers", value=1.00, step=0.05, key="iq_p_center")
         st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_center")
     with bq3:
-        st.caption("**dCon Right**")
+        _ch("dCon Right")
         st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_d")
         st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_d")
         st.number_input("Providers", value=1.00, step=0.05, key="iq_p_d")
@@ -56,19 +58,19 @@ with st.sidebar.expander("**📊 Per Capita Scaling**", expanded=False):
     st.markdown("**Power** — $ multiplier per class")
     pw1, pw2, pw3 = st.columns(3)
     with pw1:
-        st.caption("**cCon Left**")
+        _ch("cCon Left")
         st.number_input("Electrons", value=1.0, step=0.05, key="p_e_c")
         st.number_input("GovNukes", value=1.3, step=0.05, key="p_g_c")
         st.number_input("Providers", value=0.5, step=0.05, key="p_p_c")
         st.number_input("SinSayers", value=1.5, step=0.05, key="p_s_c")
     with pw2:
-        st.caption("**Center**")
+        _ch("Center")
         st.number_input("Electrons", value=1.0, step=0.05, key="p_e_center")
         st.number_input("GovNukes", value=1.0, step=0.05, key="p_g_center")
         st.number_input("Providers", value=1.0, step=0.05, key="p_p_center")
         st.number_input("SinSayers", value=1.0, step=0.05, key="p_s_center")
     with pw3:
-        st.caption("**dCon Right**")
+        _ch("dCon Right")
         st.number_input("Electrons", value=1.0, step=0.05, key="p_e_d")
         st.number_input("GovNukes", value=0.55, step=0.05, key="p_g_d")
         st.number_input("Providers", value=0.8, step=0.05, key="p_p_d")
@@ -233,7 +235,7 @@ _FOOTER_ANNOTATION = dict(
 
 _universe = st.session_state.get("universe_name", "").strip()
 st.header(f"Health & Wealth of the {_universe}" if _universe else "Health & Wealth of the [Universe]")
-st.markdown("<style>section[data-testid='stMain'] details summary p { font-weight:600; font-size:0.95rem; }</style>", unsafe_allow_html=True)
+st.markdown("<style>section[data-testid='stMain'] details summary p { font-weight:600; font-size:0.95rem; } section[data-testid='stSidebar'] div[data-testid='stNumberInput'] label { text-align:center; display:block; width:100%; }</style>", unsafe_allow_html=True)
 
 with st.expander("Electron Throttles", expanded=True):
     st.markdown("<style>div.stSlider > label { display:block; text-align:center; width:100%; }</style>", unsafe_allow_html=True)
