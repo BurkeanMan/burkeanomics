@@ -53,7 +53,7 @@ with st.sidebar.expander("**📊 Per Capita Scaling**", expanded=False):
         st.number_input("Providers", value=1.00, step=0.05, key="iq_p_d")
         st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_d")
 
-    st.markdown("**Power** — multiplier vs Center anchor")
+    st.markdown("**Power** — $ multiplier per class")
     pw1, pw2, pw3 = st.columns(3)
     with pw1:
         st.caption("**cCon Left**")
@@ -63,10 +63,10 @@ with st.sidebar.expander("**📊 Per Capita Scaling**", expanded=False):
         st.number_input("SinSayers", value=1.5, step=0.05, key="p_s_c")
     with pw2:
         st.caption("**Center**")
-        st.number_input("Electrons", value=1.0, step=0.05, key="p_e_center", disabled=True)
-        st.number_input("GovNukes", value=1.0, step=0.05, key="p_g_center", disabled=True)
-        st.number_input("Providers", value=1.0, step=0.05, key="p_p_center", disabled=True)
-        st.number_input("SinSayers", value=1.0, step=0.05, key="p_s_center", disabled=True)
+        st.number_input("Electrons", value=1.0, step=0.05, key="p_e_center")
+        st.number_input("GovNukes", value=1.0, step=0.05, key="p_g_center")
+        st.number_input("Providers", value=1.0, step=0.05, key="p_p_center")
+        st.number_input("SinSayers", value=1.0, step=0.05, key="p_s_center")
     with pw3:
         st.caption("**dCon Right**")
         st.number_input("Electrons", value=1.0, step=0.05, key="p_e_d")
