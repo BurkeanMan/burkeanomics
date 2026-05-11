@@ -34,7 +34,7 @@ if st.sidebar.button("🔄 Reset Settings", help="Reset ALL settings to defaults
 _ch = lambda t: st.markdown(f"<p style='text-align:center;font-size:0.8rem;font-weight:600;color:#888;margin:0 0 4px 0'>{t}</p>", unsafe_allow_html=True)
 
 with st.sidebar.expander("**📊 Per Capita Scaling**", expanded=False):
-    st.markdown("**Brains** — IQ multiplier per class")
+    st.markdown("<p style='text-align:center;font-weight:600;margin:4px 0'>Brains — IQ multiplier per class</p>", unsafe_allow_html=True)
     bq1, bq2, bq3 = st.columns(3)
     with bq1:
         _ch("cCon Left")
@@ -55,7 +55,7 @@ with st.sidebar.expander("**📊 Per Capita Scaling**", expanded=False):
         st.number_input("Providers", value=1.00, step=0.05, key="iq_p_d")
         st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_d")
 
-    st.markdown("**Power** — $ multiplier per class")
+    st.markdown("<hr style='margin:12px 0 6px 0;border:none;border-top:1px solid #ddd;'><p style='text-align:center;font-weight:600;margin:0 0 4px 0'>Power — $ multiplier per class</p>", unsafe_allow_html=True)
     pw1, pw2, pw3 = st.columns(3)
     with pw1:
         _ch("cCon Left")
@@ -79,58 +79,58 @@ with st.sidebar.expander("**📊 Per Capita Scaling**", expanded=False):
 with st.sidebar.expander("**👥 Nucleons per Electron**", expanded=False):
     col_e = st.columns(3)
     with col_e[0]:
-        st.caption("**cCon Left**")
+        _ch("cCon Left")
         st.number_input("GovNukes", 14, step=1, key="pop_g_c")
         st.number_input("Providers", 50, step=1, key="pop_p_c")
         st.number_input("SinSayers", 60, step=1, key="pop_s_c")
     with col_e[1]:
-        st.caption("**Center**")
+        _ch("Center")
         st.number_input("GovNukes", 13, step=1, key="pop_g_center")
         st.number_input("Providers", 40, step=1, key="pop_p_center")
         st.number_input("SinSayers", 50, step=1, key="pop_s_center")
     with col_e[2]:
-        st.caption("**dCon Right**")
+        _ch("dCon Right")
         st.number_input("GovNukes", 8, step=1, key="pop_g_d")
         st.number_input("Providers", 55, step=1, key="pop_p_d")
         st.number_input("SinSayers", 15, step=1, key="pop_s_d")
 
-with st.sidebar.expander("**🧬 Nucleon Brains**", expanded=False):
+with st.sidebar.expander("**🧬 Per Capita Nucleon Brains**", expanded=False):
     st.caption("Top Execs & AI Enhanced IQ per Entity")
     st.markdown("**GovNukes**")
     gcols = st.columns(3)
     with gcols[0]:
-        st.number_input("Top Execs per", 10, step=1, key="top_execs_g_c")
-        st.number_input("AI Enhanced IQ per Exec", 150, step=5, key="ai_iq_g_c")
+        st.number_input("Top Execs", 10, step=1, key="top_execs_g_c")
+        st.number_input("AI Enhanced IQ", 150, step=5, key="ai_iq_g_c")
     with gcols[1]:
-        st.number_input("Top Execs per", 10, step=1, key="top_execs_g_center")
-        st.number_input("AI Enhanced IQ per Exec", 150, step=5, key="ai_iq_g_center")
+        st.number_input("Top Execs", 10, step=1, key="top_execs_g_center")
+        st.number_input("AI Enhanced IQ", 150, step=5, key="ai_iq_g_center")
     with gcols[2]:
-        st.number_input("Top Execs per", 10, step=1, key="top_execs_g_d")
-        st.number_input("AI Enhanced IQ per Exec", 175, step=5, key="ai_iq_g_d")
+        st.number_input("Top Execs", 10, step=1, key="top_execs_g_d")
+        st.number_input("AI Enhanced IQ", 175, step=5, key="ai_iq_g_d")
 
     st.markdown("**Providers**")
     pcols = st.columns(3)
     with pcols[0]:
-        st.number_input("Top Execs per", 12, step=1, key="top_execs_p_c")
-        st.number_input("AI Enhanced IQ per Exec", 150, step=5, key="ai_iq_p_c")
+        st.number_input("Top Execs", 12, step=1, key="top_execs_p_c")
+        st.number_input("AI Enhanced IQ", 150, step=5, key="ai_iq_p_c")
     with pcols[1]:
-        st.number_input("Top Execs per", 10, step=1, key="top_execs_p_center")
-        st.number_input("AI Enhanced IQ per Exec", 225, step=5, key="ai_iq_p_center")
+        st.number_input("Top Execs", 10, step=1, key="top_execs_p_center")
+        st.number_input("AI Enhanced IQ", 225, step=5, key="ai_iq_p_center")
     with pcols[2]:
-        st.number_input("Top Execs per", 10, step=1, key="top_execs_p_d")
-        st.number_input("AI Enhanced IQ per Exec", 394, step=5, key="ai_iq_p_d")
+        st.number_input("Top Execs", 10, step=1, key="top_execs_p_d")
+        st.number_input("AI Enhanced IQ", 394, step=5, key="ai_iq_p_d")
 
     st.markdown("**SinSayers**")
     scols = st.columns(3)
     with scols[0]:
-        st.number_input("Top Execs per", 10, step=1, key="top_execs_s_c")
-        st.number_input("AI Enhanced IQ per Exec", 150, step=5, key="ai_iq_s_c")
+        st.number_input("Top Execs", 10, step=1, key="top_execs_s_c")
+        st.number_input("AI Enhanced IQ", 150, step=5, key="ai_iq_s_c")
     with scols[1]:
-        st.number_input("Top Execs per", 10, step=1, key="top_execs_s_center")
-        st.number_input("AI Enhanced IQ per Exec", 150, step=5, key="ai_iq_s_center")
+        st.number_input("Top Execs", 10, step=1, key="top_execs_s_center")
+        st.number_input("AI Enhanced IQ", 150, step=5, key="ai_iq_s_center")
     with scols[2]:
-        st.number_input("Top Execs per", 10, step=1, key="top_execs_s_d")
-        st.number_input("AI Enhanced IQ per Exec", 175, step=5, key="ai_iq_s_d")
+        st.number_input("Top Execs", 10, step=1, key="top_execs_s_d")
+        st.number_input("AI Enhanced IQ", 175, step=5, key="ai_iq_s_d")
 
 with st.sidebar.expander("**🌐 Constants**", expanded=False):
     households = st.number_input("California Households (Electrons)", 13970000, step=10000, key="households")
