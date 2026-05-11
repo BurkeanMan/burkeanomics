@@ -31,16 +31,43 @@ if st.sidebar.button("🔄 Reset Settings", help="Reset ALL settings to defaults
 
 # ====================== SIDEBAR ======================
 
-with st.sidebar.expander("**📊 Per Capita Power Scaling**", expanded=False):
-    st.caption("Multiplier vs Center anchor (Center = 1.0)")
-    p1, p2 = st.columns(2)
-    with p1:
+with st.sidebar.expander("**📊 Per Capita Scaling**", expanded=False):
+    st.markdown("**Brains** — IQ multiplier per class")
+    bq1, bq2, bq3 = st.columns(3)
+    with bq1:
+        st.caption("**cCon Left**")
+        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_c")
+        st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_c")
+        st.number_input("Providers", value=1.00, step=0.05, key="iq_p_c")
+        st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_c")
+    with bq2:
+        st.caption("**Center**")
+        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_center")
+        st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_center")
+        st.number_input("Providers", value=1.00, step=0.05, key="iq_p_center")
+        st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_center")
+    with bq3:
+        st.caption("**dCon Right**")
+        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_d")
+        st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_d")
+        st.number_input("Providers", value=1.00, step=0.05, key="iq_p_d")
+        st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_d")
+
+    st.markdown("**Power** — multiplier vs Center anchor")
+    pw1, pw2, pw3 = st.columns(3)
+    with pw1:
         st.caption("**cCon Left**")
         st.number_input("Electrons", value=1.0, step=0.05, key="p_e_c")
         st.number_input("GovNukes", value=1.3, step=0.05, key="p_g_c")
         st.number_input("Providers", value=0.5, step=0.05, key="p_p_c")
         st.number_input("SinSayers", value=1.5, step=0.05, key="p_s_c")
-    with p2:
+    with pw2:
+        st.caption("**Center**")
+        st.number_input("Electrons", value=1.0, step=0.05, key="p_e_center", disabled=True)
+        st.number_input("GovNukes", value=1.0, step=0.05, key="p_g_center", disabled=True)
+        st.number_input("Providers", value=1.0, step=0.05, key="p_p_center", disabled=True)
+        st.number_input("SinSayers", value=1.0, step=0.05, key="p_s_center", disabled=True)
+    with pw3:
         st.caption("**dCon Right**")
         st.number_input("Electrons", value=1.0, step=0.05, key="p_e_d")
         st.number_input("GovNukes", value=0.55, step=0.05, key="p_g_d")
@@ -102,27 +129,6 @@ with st.sidebar.expander("**🧬 Nucleon Brains**", expanded=False):
     with scols[2]:
         st.number_input("Top Execs per", 10, step=1, key="top_execs_s_d")
         st.number_input("AI Enhanced IQ per Exec", 175, step=5, key="ai_iq_s_d")
-
-with st.sidebar.expander("**🧠 Class IQ Multipliers**", expanded=False):
-    col_iq = st.columns(3)
-    with col_iq[0]:
-        st.caption("**cCon Left**")
-        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_c")
-        st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_c")
-        st.number_input("Providers", value=1.00, step=0.05, key="iq_p_c")
-        st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_c")
-    with col_iq[1]:
-        st.caption("**Center**")
-        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_center")
-        st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_center")
-        st.number_input("Providers", value=1.00, step=0.05, key="iq_p_center")
-        st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_center")
-    with col_iq[2]:
-        st.caption("**dCon Right**")
-        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_d")
-        st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_d")
-        st.number_input("Providers", value=1.00, step=0.05, key="iq_p_d")
-        st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_d")
 
 with st.sidebar.expander("**🌐 Constants**", expanded=False):
     households = st.number_input("California Households (Electrons)", 13970000, step=10000, key="households")
