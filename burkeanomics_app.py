@@ -1,13 +1,21 @@
 import streamlit as st
 import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
+import json
+
+# Apply any pending JSON import before widgets are instantiated
+if "_import_pending" in st.session_state:
+    _pending = st.session_state.pop("_import_pending")
+    for _k, _v in _pending.items():
+        st.session_state[_k] = _v
 
 st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="expanded")
 
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d1.95a</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.05</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -23,9 +31,12 @@ if "universe_name" not in st.session_state:
 # ====================== RESET ======================
 st.sidebar.header("⚙️ Parameters")
 st.sidebar.checkbox("🌙 Dark Mode", key="dark_mode", value=False)
-if st.sidebar.button("🔄 Reset Settings", help="Reset ALL settings to defaults"):
+if st.sidebar.button("🔄 Reset"):
+    _reset_prefixes = ("th_", "iq_", "b_", "p_", "pop_", "households", "energy",
+                       "base_iq", "top_execs", "ai_iq", "rpf_", "te_factor_",
+                       "ai_factor_", "universe_name", "dark_mode", "_uploader_key")
     for key in list(st.session_state.keys()):
-        if key.startswith(("th_", "iq_", "b_", "p_", "pop_", "households", "energy", "base_iq", "top_execs", "ai_iq", "rpf_")):
+        if key.startswith(_reset_prefixes):
             del st.session_state[key]
     st.rerun()
 
@@ -35,121 +46,191 @@ _ch = lambda t: st.markdown(f"<p style='text-align:center;font-size:0.8rem;font-
 
 with st.sidebar.expander("**🌐 Constants**", expanded=False):
     st.caption("Anchors everything else derives from")
-    households = st.number_input("California Households (Electrons)", 13970000, step=10000, key="households")
-    energy = st.number_input("Per Capita Energy Spend ($)", 6378, step=10, key="energy")
-    base_iq = st.number_input("Base IQ", 100, step=1, key="base_iq")
-    st.caption("**Nucleon Relative Power Factors** — Center Power = Energy × RPF")
-    rpf_cols = st.columns(3)
-    with rpf_cols[0]:
-        st.number_input("GovNukes", value=36667, step=100, key="rpf_g")
-    with rpf_cols[1]:
-        st.number_input("Providers", value=10000, step=100, key="rpf_p")
-    with rpf_cols[2]:
-        st.number_input("SinSayers", value=5000, step=100, key="rpf_s")
+    households = st.number_input("California Households (Electrons)", value=13970000, step=10000, key="households")
+    energy = st.number_input("Per Capita Electron Power ($)", value=6378, step=10, key="energy")
+    base_iq = st.number_input("Base IQ", value=100, step=1, key="base_iq")
+
+with st.sidebar.expander("**🧬 Per Capita Nucleon Attributes**", expanded=False):
+    # ── Brains per Class ──────────────────────────────────────────────────────
+    st.markdown("<p style='text-align:center;font-weight:600;margin:4px 0'>Brains per Class</p>", unsafe_allow_html=True)
+    st.caption("L & R: factors × Center values")
+    _bh1, _bh2, _bh3 = st.columns(3)
+    with _bh1: _ch("cCon Left")
+    with _bh2: _ch("Center")
+    with _bh3: _ch("dCon Right")
+
+    st.markdown("**GovNukes**")
+    _te_g0 = st.session_state.get("top_execs_g_center", 10)
+    _ai_g0 = st.session_state.get("ai_iq_g_center", 150)
+    gcols = st.columns(3)
+    with gcols[0]:
+        _te_f_gc = st.number_input("Top Execs ×", value=1.0, step=0.05, format="%.2f", key="te_factor_g_c")
+        st.caption(f"= {round(_te_g0 * _te_f_gc):,}")
+        _ai_f_gc = st.number_input("AI IQ ×", value=1.0, step=0.05, format="%.2f", key="ai_factor_g_c")
+        st.caption(f"= {round(_ai_g0 * _ai_f_gc):,}")
+        st.caption(f"**PC IQ: {round(_te_g0 * _te_f_gc * _ai_g0 * _ai_f_gc):,}**")
+    with gcols[1]:
+        _te_gc = st.number_input("Top Execs", value=10, step=1, key="top_execs_g_center")
+        st.caption(f"= {_te_gc:,}")
+        _ai_gc = st.number_input("AI Enhanced IQ", value=150, step=5, key="ai_iq_g_center")
+        st.caption(f"= {_ai_gc:,}")
+        st.caption(f"**PC IQ: {round(_te_gc * _ai_gc):,}**")
+    with gcols[2]:
+        _te_f_gd = st.number_input("Top Execs ×", value=1.0, step=0.05, format="%.2f", key="te_factor_g_d")
+        st.caption(f"= {round(_te_g0 * _te_f_gd):,}")
+        _ai_f_gd = st.number_input("AI IQ ×", value=1.17, step=0.05, format="%.2f", key="ai_factor_g_d")
+        st.caption(f"= {round(_ai_g0 * _ai_f_gd):,}")
+        st.caption(f"**PC IQ: {round(_te_g0 * _te_f_gd * _ai_g0 * _ai_f_gd):,}**")
+
+    st.markdown("**Providers**")
+    _te_p0 = st.session_state.get("top_execs_p_center", 10)
+    _ai_p0 = st.session_state.get("ai_iq_p_center", 225)
+    pcols = st.columns(3)
+    with pcols[0]:
+        _te_f_pc = st.number_input("Top Execs ×", value=1.0, step=0.05, format="%.2f", key="te_factor_p_c")
+        st.caption(f"= {round(_te_p0 * _te_f_pc):,}")
+        _ai_f_pc = st.number_input("AI IQ ×", value=0.8, step=0.05, format="%.2f", key="ai_factor_p_c")
+        st.caption(f"= {round(_ai_p0 * _ai_f_pc):,}")
+        st.caption(f"**PC IQ: {round(_te_p0 * _te_f_pc * _ai_p0 * _ai_f_pc):,}**")
+    with pcols[1]:
+        _te_pc = st.number_input("Top Execs", value=15, step=1, key="top_execs_p_center")
+        st.caption(f"= {_te_pc:,}")
+        _ai_pc = st.number_input("AI Enhanced IQ", value=150, step=5, key="ai_iq_p_center")
+        st.caption(f"= {_ai_pc:,}")
+        st.caption(f"**PC IQ: {round(_te_pc * _ai_pc):,}**")
+    with pcols[2]:
+        _te_f_pd = st.number_input("Top Execs ×", value=1.0, step=0.05, format="%.2f", key="te_factor_p_d")
+        st.caption(f"= {round(_te_p0 * _te_f_pd):,}")
+        _ai_f_pd = st.number_input("AI IQ ×", value=1.7, step=0.05, format="%.2f", key="ai_factor_p_d")
+        st.caption(f"= {round(_ai_p0 * _ai_f_pd):,}")
+        st.caption(f"**PC IQ: {round(_te_p0 * _te_f_pd * _ai_p0 * _ai_f_pd):,}**")
+
+    st.markdown("**SinSayers**")
+    _te_s0 = st.session_state.get("top_execs_s_center", 10)
+    _ai_s0 = st.session_state.get("ai_iq_s_center", 150)
+    scols = st.columns(3)
+    with scols[0]:
+        _te_f_sc = st.number_input("Top Execs ×", value=1.0, step=0.05, format="%.2f", key="te_factor_s_c")
+        st.caption(f"= {round(_te_s0 * _te_f_sc):,}")
+        _ai_f_sc = st.number_input("AI IQ ×", value=1.0, step=0.05, format="%.2f", key="ai_factor_s_c")
+        st.caption(f"= {round(_ai_s0 * _ai_f_sc):,}")
+        st.caption(f"**PC IQ: {round(_te_s0 * _te_f_sc * _ai_s0 * _ai_f_sc):,}**")
+    with scols[1]:
+        _te_sc = st.number_input("Top Execs", value=10, step=1, key="top_execs_s_center")
+        st.caption(f"= {_te_sc:,}")
+        _ai_sc = st.number_input("AI Enhanced IQ", value=150, step=5, key="ai_iq_s_center")
+        st.caption(f"= {_ai_sc:,}")
+        st.caption(f"**PC IQ: {round(_te_sc * _ai_sc):,}**")
+    with scols[2]:
+        _te_f_sd = st.number_input("Top Execs ×", value=1.0, step=0.05, format="%.2f", key="te_factor_s_d")
+        st.caption(f"= {round(_te_s0 * _te_f_sd):,}")
+        _ai_f_sd = st.number_input("AI IQ ×", value=1.17, step=0.05, format="%.2f", key="ai_factor_s_d")
+        st.caption(f"= {round(_ai_s0 * _ai_f_sd):,}")
+        st.caption(f"**PC IQ: {round(_te_s0 * _te_f_sd * _ai_s0 * _ai_f_sd):,}**")
+
+    # ── Power per Class ───────────────────────────────────────────────────────
+    st.markdown("<hr style='margin:12px 0 6px 0;border:none;border-top:1px solid #ddd;'><p style='text-align:center;font-weight:600;margin:0 0 4px 0'>Power per Class</p>", unsafe_allow_html=True)
+    _epwr = st.session_state.get("energy", 6378)
+    _ph1, _ph2, _ph3 = st.columns(3)
+    with _ph1: _ch("cCon Left")
+    with _ph2: _ch("Center")
+    with _ph3: _ch("dCon Right")
+
+    st.markdown("**GovNukes**")
+    _cg = _epwr * st.session_state.get("rpf_g", 36667)
+    gpow = st.columns(3)
+    with gpow[0]:
+        st.caption(f"Center: ${_cg:,.0f}")
+        _lgf = st.number_input("Factor", value=1.3, step=0.05, key="p_g_c")
+        st.caption(f"= ${_cg * _lgf:,.0f}")
+    with gpow[1]:
+        st.caption(f"PC Electron: ${_epwr:,.0f}")
+        _cgf = st.number_input("Power Factor", value=36667, step=100, format="%d", key="rpf_g")
+        st.caption(f"= ${_epwr * _cgf:,.0f}")
+    with gpow[2]:
+        st.caption(f"Center: ${_cg:,.0f}")
+        _rgf = st.number_input("Factor", value=0.54, step=0.05, key="p_g_d")
+        st.caption(f"= ${_cg * _rgf:,.0f}")
+
+    st.markdown("**Providers**")
+    _cp = _epwr * st.session_state.get("rpf_p", 10000)
+    ppow = st.columns(3)
+    with ppow[0]:
+        st.caption(f"Center: ${_cp:,.0f}")
+        _lpf = st.number_input("Factor", value=0.5, step=0.05, key="p_p_c")
+        st.caption(f"= ${_cp * _lpf:,.0f}")
+    with ppow[1]:
+        st.caption(f"PC Electron: ${_epwr:,.0f}")
+        _cpf = st.number_input("Power Factor", value=10000, step=100, format="%d", key="rpf_p")
+        st.caption(f"= ${_epwr * _cpf:,.0f}")
+    with ppow[2]:
+        st.caption(f"Center: ${_cp:,.0f}")
+        _rpf2 = st.number_input("Factor", value=0.8, step=0.05, key="p_p_d")
+        st.caption(f"= ${_cp * _rpf2:,.0f}")
+
+    st.markdown("**SinSayers**")
+    _cs = _epwr * st.session_state.get("rpf_s", 5000)
+    spow = st.columns(3)
+    with spow[0]:
+        st.caption(f"Center: ${_cs:,.0f}")
+        _lsf = st.number_input("Factor", value=1.5, step=0.05, key="p_s_c")
+        st.caption(f"= ${_cs * _lsf:,.0f}")
+    with spow[1]:
+        st.caption(f"PC Electron: ${_epwr:,.0f}")
+        _csf = st.number_input("Power Factor", value=5000, step=100, format="%d", key="rpf_s")
+        st.caption(f"= ${_epwr * _csf:,.0f}")
+    with spow[2]:
+        st.caption(f"Center: ${_cs:,.0f}")
+        _rsf = st.number_input("Factor", value=0.9, step=0.05, key="p_s_d")
+        st.caption(f"= ${_cs * _rsf:,.0f}")
 
 with st.sidebar.expander("**👥 Nucleons per Electron**", expanded=False):
     st.caption("Population structure per scenario")
     col_e = st.columns(3)
     with col_e[0]:
         _ch("cCon Left")
-        st.number_input("GovNukes", 14, step=1, key="pop_g_c")
-        st.number_input("Providers", 50, step=1, key="pop_p_c")
-        st.number_input("SinSayers", 60, step=1, key="pop_s_c")
+        st.number_input("GovNukes", value=14, step=1, key="pop_g_c")
+        st.number_input("Providers", value=35, step=1, key="pop_p_c")
+        st.number_input("SinSayers", value=60, step=1, key="pop_s_c")
     with col_e[1]:
         _ch("Center")
-        st.number_input("GovNukes", 13, step=1, key="pop_g_center")
-        st.number_input("Providers", 40, step=1, key="pop_p_center")
-        st.number_input("SinSayers", 50, step=1, key="pop_s_center")
+        st.number_input("GovNukes", value=13, step=1, key="pop_g_center")
+        st.number_input("Providers", value=40, step=1, key="pop_p_center")
+        st.number_input("SinSayers", value=50, step=1, key="pop_s_center")
     with col_e[2]:
         _ch("dCon Right")
-        st.number_input("GovNukes", 8, step=1, key="pop_g_d")
-        st.number_input("Providers", 55, step=1, key="pop_p_d")
-        st.number_input("SinSayers", 15, step=1, key="pop_s_d")
+        st.number_input("GovNukes", value=8, step=1, key="pop_g_d")
+        st.number_input("Providers", value=55, step=1, key="pop_p_d")
+        st.number_input("SinSayers", value=15, step=1, key="pop_s_d")
 
-with st.sidebar.expander("**🧬 Per Capita Nucleon Brains**", expanded=False):
-    st.caption("Intelligence inputs per entity")
-    st.markdown("**GovNukes**")
-    gcols = st.columns(3)
-    with gcols[0]:
-        st.number_input("Top Execs", 10, step=1, key="top_execs_g_c")
-        st.number_input("AI Enhanced IQ", 150, step=5, key="ai_iq_g_c")
-    with gcols[1]:
-        st.number_input("Top Execs", 10, step=1, key="top_execs_g_center")
-        st.number_input("AI Enhanced IQ", 150, step=5, key="ai_iq_g_center")
-    with gcols[2]:
-        st.number_input("Top Execs", 10, step=1, key="top_execs_g_d")
-        st.number_input("AI Enhanced IQ", 175, step=5, key="ai_iq_g_d")
-
-    st.markdown("**Providers**")
-    pcols = st.columns(3)
-    with pcols[0]:
-        st.number_input("Top Execs", 12, step=1, key="top_execs_p_c")
-        st.number_input("AI Enhanced IQ", 150, step=5, key="ai_iq_p_c")
-    with pcols[1]:
-        st.number_input("Top Execs", 10, step=1, key="top_execs_p_center")
-        st.number_input("AI Enhanced IQ", 225, step=5, key="ai_iq_p_center")
-    with pcols[2]:
-        st.number_input("Top Execs", 10, step=1, key="top_execs_p_d")
-        st.number_input("AI Enhanced IQ", 394, step=5, key="ai_iq_p_d")
-
-    st.markdown("**SinSayers**")
-    scols = st.columns(3)
-    with scols[0]:
-        st.number_input("Top Execs", 10, step=1, key="top_execs_s_c")
-        st.number_input("AI Enhanced IQ", 150, step=5, key="ai_iq_s_c")
-    with scols[1]:
-        st.number_input("Top Execs", 10, step=1, key="top_execs_s_center")
-        st.number_input("AI Enhanced IQ", 150, step=5, key="ai_iq_s_center")
-    with scols[2]:
-        st.number_input("Top Execs", 10, step=1, key="top_execs_s_d")
-        st.number_input("AI Enhanced IQ", 175, step=5, key="ai_iq_s_d")
-
-with st.sidebar.expander("**📊 Per Capita Scaling**", expanded=False):
-    st.caption("Multipliers applied to those inputs")
-    st.markdown("<p style='text-align:center;font-weight:600;margin:4px 0'>Brains — IQ multiplier per class</p>", unsafe_allow_html=True)
-    bq1, bq2, bq3 = st.columns(3)
-    with bq1:
-        _ch("cCon Left")
-        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_c")
-        st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_c")
-        st.number_input("Providers", value=1.00, step=0.05, key="iq_p_c")
-        st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_c")
-    with bq2:
-        _ch("Center")
-        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_center")
-        st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_center")
-        st.number_input("Providers", value=1.00, step=0.05, key="iq_p_center")
-        st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_center")
-    with bq3:
-        _ch("dCon Right")
-        st.number_input("Electrons", value=1.00, step=0.05, key="iq_e_d")
-        st.number_input("GovNukes", value=1.00, step=0.05, key="iq_g_d")
-        st.number_input("Providers", value=1.00, step=0.05, key="iq_p_d")
-        st.number_input("SinSayers", value=1.00, step=0.05, key="iq_s_d")
-
-    st.markdown("<hr style='margin:12px 0 6px 0;border:none;border-top:1px solid #ddd;'><p style='text-align:center;font-weight:600;margin:0 0 4px 0'>Power — $ multiplier per class</p>", unsafe_allow_html=True)
-    pw1, pw2, pw3 = st.columns(3)
-    with pw1:
-        _ch("cCon Left")
-        st.number_input("Electrons", value=1.0, step=0.05, key="p_e_c")
-        st.number_input("GovNukes", value=1.3, step=0.05, key="p_g_c")
-        st.number_input("Providers", value=0.5, step=0.05, key="p_p_c")
-        st.number_input("SinSayers", value=1.5, step=0.05, key="p_s_c")
-    with pw2:
-        _ch("Center")
-        st.number_input("Electrons", value=1.0, step=0.05, key="p_e_center")
-        st.number_input("GovNukes", value=1.0, step=0.05, key="p_g_center")
-        st.number_input("Providers", value=1.0, step=0.05, key="p_p_center")
-        st.number_input("SinSayers", value=1.0, step=0.05, key="p_s_center")
-    with pw3:
-        _ch("dCon Right")
-        st.number_input("Electrons", value=1.0, step=0.05, key="p_e_d")
-        st.number_input("GovNukes", value=0.55, step=0.05, key="p_g_d")
-        st.number_input("Providers", value=0.8, step=0.05, key="p_p_d")
-        st.number_input("SinSayers", value=0.9, step=0.05, key="p_s_d")
+_EXPORT_PREFIXES = ("th_", "iq_", "b_", "p_", "pop_", "households", "energy",
+                    "base_iq", "top_execs_", "ai_iq_", "rpf_", "te_factor_",
+                    "ai_factor_", "universe_name", "dark_mode")
 
 with st.sidebar.expander("**🏷️ Metadata**", expanded=False):
     st.text_input("Universe Name", placeholder="e.g. Cal Energy Economy", key="universe_name")
+
+    st.markdown("---")
+    # Export
+    _export_data = {k: v for k, v in st.session_state.items()
+                    if k.startswith(_EXPORT_PREFIXES)}
+    _fname = (st.session_state.get("universe_name", "universe") or "universe").replace(" ", "_") + ".json"
+    st.download_button("⬇ Export Universe JSON", data=json.dumps(_export_data, indent=2),
+                       file_name=_fname, mime="application/json")
+
+    # Import — two-run pattern: store pending, rerun, apply at top before widgets render
+    _uploader_key = st.session_state.get("_uploader_key", "uploader_0")
+    _uploaded = st.file_uploader("⬆ Import Universe JSON", type="json",
+                                 key=_uploader_key, label_visibility="collapsed")
+    if _uploaded is not None:
+        try:
+            _loaded = json.load(_uploaded)
+            st.session_state["_import_pending"] = _loaded
+            # Rotate the uploader key so it resets after import (prevents re-import loop)
+            st.session_state["_uploader_key"] = f"uploader_{abs(hash(_uploaded.name))}"
+            st.rerun()
+        except Exception as e:
+            st.error(f"Import failed: {e}")
 
 # ====================== CALCULATIONS ======================
 def calculate_per_capita(scen: str):
@@ -159,24 +240,30 @@ def calculate_per_capita(scen: str):
     energy = st.session_state.get("energy", 6378)
     rows = []
 
-    # Electrons
-    e_power = round(energy * st.session_state.get(f"p_e_{suffix}", 1.0))
-    rows.append({"Class": "Electrons (unthrottled)", "IQ": base, "Power ($)": e_power})
-    e_th_iq = round(base * (1 - th) * st.session_state.get(f"iq_e_{suffix}", 1.0))
-    rows.append({"Class": "Electrons (throttled)", "IQ": e_th_iq, "Power ($)": e_power})
+    # Electrons — power always equals Per Capita Electron Power
+    rows.append({"Class": "Electrons (unthrottled)", "IQ": base, "Power ($)": energy})
+    rows.append({"Class": "Electrons (throttled)", "IQ": round(base * (1 - th)), "Power ($)": energy})
 
-    # GovNukes — power anchored at energy × RPF, scaled per scenario
-    g_iq = round(st.session_state.get(f"top_execs_g_{suffix}", 10) * st.session_state.get(f"ai_iq_g_{suffix}", 150) * st.session_state.get(f"iq_g_{suffix}", 1.0))
+    def _nuc_iq(cls, default_te, default_ai):
+        te_c = st.session_state.get(f"top_execs_{cls}_center", default_te)
+        ai_c = st.session_state.get(f"ai_iq_{cls}_center", default_ai)
+        if suffix == "center":
+            return round(te_c * ai_c)
+        return round(te_c * st.session_state.get(f"te_factor_{cls}_{suffix}", 1.0)
+                     * ai_c * st.session_state.get(f"ai_factor_{cls}_{suffix}", 1.0))
+
+    # GovNukes
+    g_iq = _nuc_iq("g", 10, 150)
     g_power = round(energy * st.session_state.get("rpf_g", 36667) * st.session_state.get(f"p_g_{suffix}", 1.0))
     rows.append({"Class": "GovNukes", "IQ": g_iq, "Power ($)": g_power})
 
     # Providers
-    p_iq = round(st.session_state.get(f"top_execs_p_{suffix}", 10) * st.session_state.get(f"ai_iq_p_{suffix}", 225) * st.session_state.get(f"iq_p_{suffix}", 1.0))
+    p_iq = _nuc_iq("p", 10, 225)
     p_power = round(energy * st.session_state.get("rpf_p", 10000) * st.session_state.get(f"p_p_{suffix}", 1.0))
     rows.append({"Class": "Providers", "IQ": p_iq, "Power ($)": p_power})
 
     # SinSayers
-    s_iq = round(st.session_state.get(f"top_execs_s_{suffix}", 10) * st.session_state.get(f"ai_iq_s_{suffix}", 150) * st.session_state.get(f"iq_s_{suffix}", 1.0))
+    s_iq = _nuc_iq("s", 10, 150)
     s_power = round(energy * st.session_state.get("rpf_s", 5000) * st.session_state.get(f"p_s_{suffix}", 1.0))
     rows.append({"Class": "SinSayers", "IQ": s_iq, "Power ($)": s_power})
 
@@ -328,9 +415,8 @@ _add_arc(fig_main, 1, _cv_y, 2, _rv_y, _peak_cr, 0.12, _pct_cr, 1.7, _ac)
 _add_arc(fig_main, 0, _lv_y, 2, _rv_y, _peak_lr, 0.18, _pct_lr, 1.0, _ac)
 
 fig_main.add_annotation(**_FOOTER_ANNOTATION)
-with st.expander("Total BrainPower", expanded=True):
-    st.plotly_chart(fig_main, use_container_width=True)
 
+# ---- Chart 2: Stacked BP by Class ----
 stack_data = []
 for scen, label in SCENARIOS:
     df, _ = calculate_breakdown(scen)
@@ -366,8 +452,161 @@ for (_, label), hdr in zip(SCENARIOS, _case_hdrs):
         text=hdr, showarrow=False, yanchor="bottom",
         font=dict(size=11, color=_desc_color), align="center")
 fig_stacked.add_annotation(**_FOOTER_ANNOTATION)
-with st.expander("BrainPower by Class", expanded=True):
+
+# ---- Chart 3: Electrons vs Nucleons BP (new) ----
+_labs3 = ["Left", "Center", "Right"]
+_x3e = [f"{l}\nElectrons" for l in _labs3]
+_x3n = [f"{l}\nNucleons"  for l in _labs3]
+_x3_order = [x for pair in zip(_x3e, _x3n) for x in pair]
+
+_bp_ev, _bp_gv, _bp_pv, _bp_sv = [], [], [], []
+for scen, _ in SCENARIOS:
+    _dfb, _ = calculate_breakdown(scen)
+    _dfb = _dfb.set_index("Class")
+    _bp_ev.append(_dfb.loc["Electrons", "tBP"])
+    _bp_gv.append(_dfb.loc["GovNukes",  "tBP"])
+    _bp_pv.append(_dfb.loc["Providers", "tBP"])
+    _bp_sv.append(_dfb.loc["SinSayers", "tBP"])
+_bp_nv = [_bp_gv[i] + _bp_pv[i] + _bp_sv[i] for i in range(3)]
+
+fig_en = go.Figure()
+fig_en.add_trace(go.Bar(name="Electrons", x=_x3e, y=_bp_ev, marker_color="#00008B",
+    text=["Electrons"] * 3, texttemplate="%{text}<br>S$%{y:.1f}T",
+    textposition="outside", textfont=dict(color=_val_color, size=11)))
+fig_en.add_trace(go.Bar(name="SinSayers", x=_x3n, y=_bp_sv, marker_color="#8B0000",
+    text=["SinSayers"] * 3, texttemplate="%{text}<br>S$%{y:.1f}T",
+    textposition="inside", textfont=dict(color="white", size=11)))
+fig_en.add_trace(go.Bar(name="GovNukes",  x=_x3n, y=_bp_gv, marker_color="#FFD700",
+    text=["GovNukes"] * 3, texttemplate="%{text}<br>S$%{y:.1f}T",
+    textposition="inside", textfont=dict(color="#8B0000", size=11)))
+fig_en.add_trace(go.Bar(name="Providers", x=_x3n, y=_bp_pv, marker_color="#228B22",
+    text=["Providers"] * 3, texttemplate="%{text}<br>S$%{y:.1f}T",
+    textposition="inside", textfont=dict(color="white", size=11)))
+for x3n_lbl, n_tot in zip(_x3n, _bp_nv):
+    fig_en.add_annotation(x=x3n_lbl, y=n_tot, xref="x", yref="y",
+        text=f"<b>S${n_tot:.1f}T</b>", showarrow=False, yanchor="bottom", yshift=4,
+        font=dict(size=12, color=_val_color))
+for i, lbl in enumerate(_labs3):
+    fig_en.add_annotation(x=(2*i+1)/6, y=1.04, xref="paper", yref="paper",
+        text=f"<b>{lbl}</b>", showarrow=False, yanchor="bottom",
+        font=dict(size=13, color=_desc_color))
+for sep in [1.5, 3.5]:
+    fig_en.add_vline(x=sep, line_width=1, line_color="#bbb")
+fig_en.update_layout(
+    barmode="stack", height=500, showlegend=False,
+    uniformtext=dict(minsize=8, mode="hide"),
+    xaxis=dict(categoryorder="array", categoryarray=_x3_order,
+               ticktext=["Electrons", "Nucleons"] * 3, tickvals=_x3_order),
+    yaxis=dict(title="tBP (Trillions Smart $)", rangemode="tozero"),
+    margin=dict(b=80, t=80))
+fig_en.add_annotation(**_FOOTER_ANNOTATION)
+
+# ---- Chart: Total IQ (log scale, new) ----
+_iq_ev, _iq_nv = [], []
+for scen, _ in SCENARIOS:
+    _dfem = calculate_en_masse(scen)
+    _iq_ev.append(float(_dfem[_dfem["Class"] == "Electrons (throttled)"]["Total IQ"].values[0]))
+    _iq_nv.append(float(_dfem[_dfem["Class"].isin(["GovNukes","Providers","SinSayers"])]["Total IQ"].sum()))
+
+fig_iq = go.Figure()
+fig_iq.add_trace(go.Bar(name="Electrons", x=_labs3, y=_iq_ev, marker_color="#00008B",
+    text=[f"Electrons<br>{v:,.0f}" for v in _iq_ev],
+    textposition="inside", textfont=dict(color="white", size=10)))
+fig_iq.add_trace(go.Bar(name="Nucleons", x=_labs3, y=_iq_nv, marker_color="#4477bb",
+    text=[f"Nucleons<br>{v:,.0f}" for v in _iq_nv],
+    textposition="inside", textfont=dict(color="white", size=10)))
+# Blue arrows: horizontal, all paper coords — avoids log-scale axis issues entirely
+_iq_mult_lc = _iq_ev[1] / _iq_ev[0]
+_iq_mult_lr = _iq_ev[2] / _iq_ev[0]
+fig_iq.add_annotation(x="Center", y=1.07, xref="x", yref="paper",
+    ax="Left", ay=0, axref="x", ayref="pixel",
+    text=f"<b>{_iq_mult_lc:.0f}X</b>", showarrow=True,
+    arrowhead=2, arrowwidth=2, arrowcolor="#1155cc",
+    font=dict(color="#1155cc", size=13), yanchor="bottom")
+fig_iq.add_annotation(x="Right", y=1.13, xref="x", yref="paper",
+    ax="Left", ay=0, axref="x", ayref="pixel",
+    text=f"<b>{_iq_mult_lr:.0f}X</b>", showarrow=True,
+    arrowhead=2, arrowwidth=2, arrowcolor="#1155cc",
+    font=dict(color="#1155cc", size=13), yanchor="bottom")
+# Red: E→N ratio labels at mid-chart height
+for lbl_x, e_val, n_val in zip(_labs3, _iq_ev, _iq_nv):
+    ratio = e_val / n_val
+    ratio_str = f"{ratio/1000:.1f}K×"
+    fig_iq.add_annotation(x=lbl_x, y=0.48, xref="x", yref="paper",
+        text=f"<b>({ratio_str})</b>", showarrow=False,
+        font=dict(color="#cc2200", size=10), xanchor="left")
+fig_iq.update_layout(
+    barmode="group", height=540, showlegend=False,
+    uniformtext=dict(minsize=8, mode="hide"),
+    yaxis=dict(type="log", title="Total IQ"),
+    xaxis=dict(tickvals=_labs3, ticktext=_labs3),
+    margin=dict(b=80, t=130))
+fig_iq.add_annotation(**_FOOTER_ANNOTATION)
+
+# ---- Chart: Power Per Capita (log scale, new) ----
+def _fmt_pwr(v):
+    if v >= 1e9: return f"${v/1e9:.0f}B"
+    if v >= 1e6: return f"${v/1e6:.0f}M"
+    return f"${v:,.0f}"
+
+_pw_cls = ["Electrons", "GovNukes", "Providers", "SinSayers"]
+_pw_clr = {"Electrons":"#00008B","GovNukes":"#FFD700","Providers":"#228B22","SinSayers":"#8B0000"}
+_pw_vals = {c: [] for c in _pw_cls}
+_pw_x_cats = []
+for scen, lbl in SCENARIOS:
+    _dfpc = calculate_per_capita(scen).set_index("Class")
+    _pw_vals["Electrons"].append(float(_dfpc.loc["Electrons (throttled)", "Power ($)"]))
+    _pw_vals["GovNukes"].append(float(_dfpc.loc["GovNukes",  "Power ($)"]))
+    _pw_vals["Providers"].append(float(_dfpc.loc["Providers","Power ($)"]))
+    _pw_vals["SinSayers"].append(float(_dfpc.loc["SinSayers","Power ($)"]))
+    for c in _pw_cls:
+        _pw_x_cats.append(f"{lbl}\n{c}")
+
+_pw_txt_clr = {"Electrons": "white", "GovNukes": "#333333", "Providers": "white", "SinSayers": "white"}
+fig_pw = go.Figure()
+for cls in _pw_cls:
+    _x_cls = [f"{lbl}\n{cls}" for lbl in _labs3]
+    fig_pw.add_trace(go.Bar(name=cls, x=_x_cls, y=_pw_vals[cls],
+        marker_color=_pw_clr[cls],
+        text=[f"{cls}<br>{_fmt_pwr(v)}" for v in _pw_vals[cls]],
+        textposition="inside", textfont=dict(color=_pw_txt_clr[cls], size=9)))
+# GovNukes/Electrons ratio arrows — all paper coords to avoid log-scale axis issues
+for i, lbl in enumerate(_labs3):
+    e_v = _pw_vals["Electrons"][i]
+    g_v = _pw_vals["GovNukes"][i]
+    ratio_str = f"{round((g_v/e_v)/1000)}K X"
+    fig_pw.add_annotation(
+        x=f"{lbl}\nElectrons", y=1.06, xref="x", yref="paper",
+        ax=f"{lbl}\nGovNukes", ay=0, axref="x", ayref="pixel",
+        text=f"<b>{ratio_str}</b>", showarrow=True,
+        arrowhead=2, arrowwidth=1.5, arrowcolor="#cc2200",
+        font=dict(color="#cc2200", size=11), yanchor="bottom")
+for i, lbl in enumerate(_labs3):
+    fig_pw.add_annotation(x=(4*i+1.5)/12, y=1.04, xref="paper", yref="paper",
+        text=f"<b>{lbl}</b>", showarrow=False, yanchor="bottom",
+        font=dict(size=13, color=_desc_color))
+for sep in [3.5, 7.5]:
+    fig_pw.add_vline(x=sep, line_width=1, line_color="#bbb")
+fig_pw.update_layout(
+    barmode="group", height=540, showlegend=False,
+    uniformtext=dict(minsize=7, mode="hide"),
+    yaxis=dict(type="log", title="Power ($)"),
+    xaxis=dict(categoryorder="array", categoryarray=_pw_x_cats,
+               showticklabels=False),
+    margin=dict(b=120, t=80))
+fig_pw.add_annotation(**_FOOTER_ANNOTATION)
+
+# ---- Render sections ----
+with st.expander("BrainPower", expanded=True):
+    st.plotly_chart(fig_main,    use_container_width=True)
     st.plotly_chart(fig_stacked, use_container_width=True)
+    st.plotly_chart(fig_en,      use_container_width=True)
+
+with st.expander("Total IQ", expanded=True):
+    st.plotly_chart(fig_iq, use_container_width=True)
+
+with st.expander("Power Per Capita", expanded=True):
+    st.plotly_chart(fig_pw, use_container_width=True)
 
 # ====================== TABLES ======================
 with st.expander("Per Capita Brains & Power", expanded=False):
