@@ -15,7 +15,7 @@ st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_s
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.06</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.07</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -515,37 +515,43 @@ fig_iq.add_trace(go.Bar(name="Electrons", x=_labs3, y=_iq_ev, marker_color="#000
 fig_iq.add_trace(go.Bar(name="Nucleons", x=_labs3, y=_iq_nv, marker_color="#4477bb",
     text=[f"Nucleons<br>{v:,.0f}" for v in _iq_nv],
     textposition="inside", textfont=dict(color="white", size=10)))
-# Blue arcs: bezier curves Left→Center (2X) and Left→Right (3X), xref=x numeric (0=Left,1=Center,2=Right)
+# Blue arcs: Electrons bar centers at i-0.2 (Left=-0.2, Center=0.8, Right=1.8)
+# 2X: Left→Center (lower arc); 3X: Left→Right (higher arc to clear 2X)
 _iq_mult_lc = _iq_ev[1] / _iq_ev[0]
 _iq_mult_lr = _iq_ev[2] / _iq_ev[0]
-fig_iq.add_shape(type="path", path="M 0,0.84 C 0.2,1.06 0.8,1.06 1,0.84",
+fig_iq.add_shape(type="path", path="M -0.2,0.84 C 0.1,1.06 0.5,1.06 0.8,0.84",
     xref="x", yref="paper", line=dict(color="#1155cc", width=2))
-fig_iq.add_shape(type="path", path="M 0,0.84 C 0.4,1.13 1.6,1.13 2,0.84",
+fig_iq.add_shape(type="path", path="M -0.2,0.84 C 0.2,1.15 1.4,1.15 1.8,0.84",
     xref="x", yref="paper", line=dict(color="#1155cc", width=2))
-# Arrowheads at arc endpoints (tail slightly upper-left, matching bezier descent angle)
-fig_iq.add_annotation(x=1, y=0.84, xref="x", yref="paper",
-    ax=-15, ay=-15, axref="pixel", ayref="pixel",
+# Arrowheads at Electrons bar centers for Center and Right (tail from upper-left)
+fig_iq.add_annotation(x=0.8, y=0.84, xref="x", yref="paper",
+    ax=-15, ay=-18, axref="pixel", ayref="pixel",
     text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowcolor="#1155cc")
-fig_iq.add_annotation(x=2, y=0.84, xref="x", yref="paper",
-    ax=-15, ay=-15, axref="pixel", ayref="pixel",
+fig_iq.add_annotation(x=1.8, y=0.84, xref="x", yref="paper",
+    ax=-15, ay=-18, axref="pixel", ayref="pixel",
     text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowcolor="#1155cc")
-# Labels at arc peaks
-fig_iq.add_annotation(x=0.5, y=1.06, xref="x", yref="paper",
+# Labels at arc peaks (midpoint of each arc's x-span)
+fig_iq.add_annotation(x=0.3, y=1.06, xref="x", yref="paper",
     text=f"<b>{_iq_mult_lc:.0f}X</b>", showarrow=False,
     font=dict(color="#1155cc", size=13), yanchor="bottom")
-fig_iq.add_annotation(x=1.0, y=1.13, xref="x", yref="paper",
+fig_iq.add_annotation(x=0.8, y=1.15, xref="x", yref="paper",
     text=f"<b>{_iq_mult_lr:.0f}X</b>", showarrow=False,
     font=dict(color="#1155cc", size=13), yanchor="bottom")
-# Red arrows: arrowhead at Nucleons bar (bottom of log scale), text label floats above
+# Red bezier curves: top-right of Electrons (x=i, y=e_val) → center of Nucleons (x=i+0.2, y=n_val)
+# yref="y" is safe on log scale (only ayref="y" for arrow tail is broken)
 for i, (e_val, n_val) in enumerate(zip(_iq_ev, _iq_nv)):
-    ratio = e_val / n_val
-    ratio_str = f"{ratio/1000:.1f}K×"
-    fig_iq.add_annotation(
-        x=i + 0.2, y=0.07, xref="x", yref="paper",  # i+0.2 = Nucleons bar x in each group
-        ax=0, ay=-200, axref="pixel", ayref="pixel",
-        text=f"<b>({ratio_str})</b>", showarrow=True,
-        arrowhead=2, arrowwidth=1.5, arrowcolor="#cc2200",
-        font=dict(color="#cc2200", size=10), xanchor="center")
+    geomean = (e_val * n_val) ** 0.5  # geometric midpoint on log scale
+    decline = (1 - n_val / e_val) * 100
+    nx = i + 0.2  # Nucleons bar center x
+    _path = f"M {i},{e_val:.0f} C {nx:.1f},{e_val:.0f} {nx:.1f},{geomean:.0f} {nx:.1f},{n_val:.0f}"
+    fig_iq.add_shape(type="path", path=_path, xref="x", yref="y",
+        line=dict(color="#cc2200", width=1.5))
+    fig_iq.add_annotation(x=nx, y=n_val, xref="x", yref="y",
+        ax=0, ay=-12, axref="pixel", ayref="pixel",
+        text="", showarrow=True, arrowhead=2, arrowwidth=1.5, arrowcolor="#cc2200")
+    fig_iq.add_annotation(x=nx, y=geomean, xref="x", yref="y",
+        text=f"<b>−{decline:.2f}%</b>", showarrow=False,
+        font=dict(color="#cc2200", size=9), xanchor="left", xshift=4)
 fig_iq.update_layout(
     barmode="group", height=540, showlegend=False,
     uniformtext=dict(minsize=8, mode="hide"),
