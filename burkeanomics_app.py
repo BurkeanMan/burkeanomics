@@ -3,6 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import json
+import math
 
 # Apply any pending JSON import before widgets are instantiated
 if "_import_pending" in st.session_state:
@@ -15,7 +16,7 @@ st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_s
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.07</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.08</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -326,16 +327,33 @@ _FOOTER_ANNOTATION = dict(
 _universe = st.session_state.get("universe_name", "").strip()
 st.header(f"Health & Wealth of the {_universe}" if _universe else "Health & Wealth of the [Universe]")
 st.markdown("<style>section[data-testid='stMain'] details summary p { font-weight:600; font-size:0.95rem; } section[data-testid='stSidebar'] div[data-testid='stNumberInput'] label { text-align:center; display:block; width:100%; }</style>", unsafe_allow_html=True)
+st.markdown(
+    "<div style='display:flex;gap:6px;padding:2px 0 14px 0;font-size:14px;font-weight:600;'>"
+    "<a href='#throttles' style='color:#1155cc;text-decoration:none;'>Throttles</a>"
+    "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
+    "<a href='#brainpower' style='color:#1155cc;text-decoration:none;'>BrainPower</a>"
+    "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
+    "<a href='#brains' style='color:#1155cc;text-decoration:none;'>Brains</a>"
+    "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
+    "<a href='#power' style='color:#1155cc;text-decoration:none;'>Power</a>"
+    "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
+    "<a href='#tables' style='color:#1155cc;text-decoration:none;'>Tables</a>"
+    "</div>",
+    unsafe_allow_html=True)
 
+st.markdown('<div id="throttles"></div>', unsafe_allow_html=True)
 with st.expander("Electron Throttles", expanded=True):
     st.markdown("<style>div.stSlider > label { display:block; text-align:center; width:100%; }</style>", unsafe_allow_html=True)
     _et_l, _et_c, _et_r = st.columns(3)
     with _et_l:
-        st.slider("Left · cCon", 0, 100, 75, 1, format="%d%%", key="th_ccon")
+        st.slider("Left · cCon", 0, 99, 75, 1, format="%d%%", key="th_ccon")
+        st.markdown("<p style='text-align:right;font-size:11px;color:#aaa;margin:-10px 0 0 0'>─ 100%</p>", unsafe_allow_html=True)
     with _et_c:
-        st.slider("Center", 0, 100, 50, 1, format="%d%%", key="th_center")
+        st.slider("Center", 0, 99, 50, 1, format="%d%%", key="th_center")
+        st.markdown("<p style='text-align:right;font-size:11px;color:#aaa;margin:-10px 0 0 0'>─ 100%</p>", unsafe_allow_html=True)
     with _et_r:
-        st.slider("Right · dCon", 0, 100, 25, 1, format="%d%%", key="th_dcon")
+        st.slider("Right · dCon", 0, 99, 25, 1, format="%d%%", key="th_dcon")
+        st.markdown("<p style='text-align:right;font-size:11px;color:#aaa;margin:-10px 0 0 0'>─ 100%</p>", unsafe_allow_html=True)
 
 compare_df = pd.DataFrame([
     {"Scenario": label, "Total tBP (Trillions Smart $)": calculate_breakdown(scen)[1]}
@@ -515,41 +533,60 @@ fig_iq.add_trace(go.Bar(name="Electrons", x=_labs3, y=_iq_ev, marker_color="#000
 fig_iq.add_trace(go.Bar(name="Nucleons", x=_labs3, y=_iq_nv, marker_color="#4477bb",
     text=[f"Nucleons<br>{v:,.0f}" for v in _iq_nv],
     textposition="inside", textfont=dict(color="white", size=10)))
-# Blue arcs: Electrons bar centers at i-0.2 (Left=-0.2, Center=0.8, Right=1.8)
-# 2X: Left→Center (lower arc); 3X: Left→Right (higher arc to clear 2X)
+# Convert data values to approximate paper y on the log scale
+# (xref="x"/yref="y" with categorical axis is unreliable for shapes/annotations;
+#  all-paper coords sidestep this entirely)
+_all_iq = _iq_ev + _iq_nv
+_iq_log_lo = math.floor(math.log10(min(_all_iq)))
+_iq_log_hi = math.log10(max(_all_iq)) + 0.4
+def _iq_py(v):
+    return (math.log10(v) - _iq_log_lo) / (_iq_log_hi - _iq_log_lo)
+_e_ys = [_iq_py(v) for v in _iq_ev]   # Electrons bar top paper y
+_n_ys = [_iq_py(v) for v in _iq_nv]   # Nucleons bar top paper y
+
+# Paper x positions (categorical axis spans [-0.5, 2.5] → paper_x = (axis_x+0.5)/3)
+# bar centers: Electrons at i-0.2, Nucleons at i+0.2; right edge of Electrons at i
+_e_cx = [0.100, 0.433, 0.767]   # Electrons bar centers in paper x
+_e_rx = [0.167, 0.500, 0.833]   # Electrons bar right edges in paper x
+_n_cx = [0.233, 0.567, 0.900]   # Nucleons bar centers in paper x
+
+# Blue arcs: Left Electrons center → Center/Right Electrons centers (all paper coords)
+# 2X arcs higher than before so it clears 1X arc; 3X even higher
 _iq_mult_lc = _iq_ev[1] / _iq_ev[0]
 _iq_mult_lr = _iq_ev[2] / _iq_ev[0]
-fig_iq.add_shape(type="path", path="M -0.2,0.84 C 0.1,1.06 0.5,1.06 0.8,0.84",
-    xref="x", yref="paper", line=dict(color="#1155cc", width=2))
-fig_iq.add_shape(type="path", path="M -0.2,0.84 C 0.2,1.15 1.4,1.15 1.8,0.84",
-    xref="x", yref="paper", line=dict(color="#1155cc", width=2))
-# Arrowheads at Electrons bar centers for Center and Right (tail from upper-left)
-fig_iq.add_annotation(x=0.8, y=0.84, xref="x", yref="paper",
+fig_iq.add_shape(type="path",
+    path=f"M {_e_cx[0]:.3f},{_e_ys[0]:.3f} C 0.18,1.10 0.36,1.10 {_e_cx[1]:.3f},{_e_ys[1]:.3f}",
+    xref="paper", yref="paper", line=dict(color="#1155cc", width=2))
+fig_iq.add_shape(type="path",
+    path=f"M {_e_cx[0]:.3f},{_e_ys[0]:.3f} C 0.25,1.20 0.65,1.20 {_e_cx[2]:.3f},{_e_ys[2]:.3f}",
+    xref="paper", yref="paper", line=dict(color="#1155cc", width=2))
+# Arrowheads at arc endpoints (tail from upper-left, matching bezier descent angle)
+fig_iq.add_annotation(x=_e_cx[1], y=_e_ys[1], xref="paper", yref="paper",
     ax=-15, ay=-18, axref="pixel", ayref="pixel",
     text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowcolor="#1155cc")
-fig_iq.add_annotation(x=1.8, y=0.84, xref="x", yref="paper",
+fig_iq.add_annotation(x=_e_cx[2], y=_e_ys[2], xref="paper", yref="paper",
     ax=-15, ay=-18, axref="pixel", ayref="pixel",
     text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowcolor="#1155cc")
-# Labels at arc peaks (midpoint of each arc's x-span)
-fig_iq.add_annotation(x=0.3, y=1.06, xref="x", yref="paper",
-    text=f"<b>{_iq_mult_lc:.0f}X</b>", showarrow=False,
+# Labels at arc peaks
+fig_iq.add_annotation(x=0.267, y=1.10, xref="paper", yref="paper",
+    text=f"<b>{_iq_mult_lc:.1f}X</b>", showarrow=False,
     font=dict(color="#1155cc", size=13), yanchor="bottom")
-fig_iq.add_annotation(x=0.8, y=1.15, xref="x", yref="paper",
-    text=f"<b>{_iq_mult_lr:.0f}X</b>", showarrow=False,
+fig_iq.add_annotation(x=0.433, y=1.20, xref="paper", yref="paper",
+    text=f"<b>{_iq_mult_lr:.1f}X</b>", showarrow=False,
     font=dict(color="#1155cc", size=13), yanchor="bottom")
-# Red bezier curves: top-right of Electrons (x=i, y=e_val) → center of Nucleons (x=i+0.2, y=n_val)
-# yref="y" is safe on log scale (only ayref="y" for arrow tail is broken)
+# Red bezier curves (all paper coords): top-right of Electrons → center of Nucleons
 for i, (e_val, n_val) in enumerate(zip(_iq_ev, _iq_nv)):
-    geomean = (e_val * n_val) ** 0.5  # geometric midpoint on log scale
+    ey, ny = _e_ys[i], _n_ys[i]
+    ex_r, nx_c = _e_rx[i], _n_cx[i]
+    mid_y = (ey + ny) / 2
     decline = (1 - n_val / e_val) * 100
-    nx = i + 0.2  # Nucleons bar center x
-    _path = f"M {i},{e_val:.0f} C {nx:.1f},{e_val:.0f} {nx:.1f},{geomean:.0f} {nx:.1f},{n_val:.0f}"
-    fig_iq.add_shape(type="path", path=_path, xref="x", yref="y",
-        line=dict(color="#cc2200", width=1.5))
-    fig_iq.add_annotation(x=nx, y=n_val, xref="x", yref="y",
+    fig_iq.add_shape(type="path",
+        path=f"M {ex_r:.3f},{ey:.3f} C {nx_c:.3f},{ey:.3f} {nx_c:.3f},{mid_y:.3f} {nx_c:.3f},{ny:.3f}",
+        xref="paper", yref="paper", line=dict(color="#cc2200", width=1.5))
+    fig_iq.add_annotation(x=nx_c, y=ny, xref="paper", yref="paper",
         ax=0, ay=-12, axref="pixel", ayref="pixel",
         text="", showarrow=True, arrowhead=2, arrowwidth=1.5, arrowcolor="#cc2200")
-    fig_iq.add_annotation(x=nx, y=geomean, xref="x", yref="y",
+    fig_iq.add_annotation(x=nx_c, y=mid_y, xref="paper", yref="paper",
         text=f"<b>−{decline:.2f}%</b>", showarrow=False,
         font=dict(color="#cc2200", size=9), xanchor="left", xshift=4)
 fig_iq.update_layout(
@@ -587,14 +624,24 @@ for cls in _pw_cls:
         marker_color=_pw_clr[cls],
         text=[f"{cls}<br>{_fmt_pwr(v)}" for v in _pw_vals[cls]],
         textposition="inside", textfont=dict(color=_pw_txt_clr[cls], size=9)))
-# GovNukes/Electrons ratio arrows — all paper coords to avoid log-scale axis issues
+# GovNukes/Electrons ratio arrows: head at GovNukes bar top, tail at Electrons bar top
+# Compute paper y for bar tops; use pixel offset for tail (ayref="y" broken on log scale)
+_pw_plot_h = 340  # chart height 540 - margin_t 80 - margin_b 120
+_all_pw_vals = [v for cls in _pw_cls for v in _pw_vals[cls]]
+_pw_log_lo = math.floor(math.log10(min(_all_pw_vals)))
+_pw_log_hi = math.log10(max(_all_pw_vals)) + 0.4
+def _pw_py(v):
+    return (math.log10(v) - _pw_log_lo) / (_pw_log_hi - _pw_log_lo)
 for i, lbl in enumerate(_labs3):
     e_v = _pw_vals["Electrons"][i]
     g_v = _pw_vals["GovNukes"][i]
+    e_py = _pw_py(e_v)
+    g_py = _pw_py(g_v)
+    ay_px = round((g_py - e_py) * _pw_plot_h)  # positive = tail below head = at Electrons
     ratio_str = f"{round((g_v/e_v)/1000)}K X"
     fig_pw.add_annotation(
-        x=f"{lbl}\nGovNukes", y=1.06, xref="x", yref="paper",
-        ax=f"{lbl}\nElectrons", ay=0, axref="x", ayref="pixel",
+        x=f"{lbl}\nGovNukes", y=g_py, xref="x", yref="paper",
+        ax=f"{lbl}\nElectrons", ay=ay_px, axref="x", ayref="pixel",
         text=f"<b>{ratio_str}</b>", showarrow=True,
         arrowhead=2, arrowwidth=1.5, arrowcolor="#cc2200",
         font=dict(color="#cc2200", size=11), yanchor="bottom")
@@ -614,18 +661,23 @@ fig_pw.update_layout(
 fig_pw.add_annotation(**_FOOTER_ANNOTATION)
 
 # ---- Render sections ----
+st.markdown('<div id="brainpower"></div>', unsafe_allow_html=True)
 with st.expander("BrainPower", expanded=True):
     st.plotly_chart(fig_main,    use_container_width=True)
     st.plotly_chart(fig_stacked, use_container_width=True)
     st.plotly_chart(fig_en,      use_container_width=True)
 
+st.markdown('<div id="brains"></div>', unsafe_allow_html=True)
 with st.expander("Total IQ", expanded=True):
     st.plotly_chart(fig_iq, use_container_width=True)
 
+st.markdown('<div id="power"></div>', unsafe_allow_html=True)
 with st.expander("Power Per Capita", expanded=True):
     st.plotly_chart(fig_pw, use_container_width=True)
 
 # ====================== TABLES ======================
+st.markdown('<div id="tables"></div>', unsafe_allow_html=True)
+st.markdown("### Tables")
 with st.expander("Per Capita Brains & Power", expanded=False):
     col_l, col_c, col_r = st.columns(3)
     for col, (scen, label) in zip([col_l, col_c, col_r], SCENARIOS):
