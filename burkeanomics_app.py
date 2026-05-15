@@ -16,7 +16,7 @@ st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_s
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.10</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.11</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -560,18 +560,20 @@ fig_iq.add_shape(type="path",
 fig_iq.add_shape(type="path",
     path=f"M {_e_cx[0]:.3f},{_e_ys[0]:.3f} C 0.25,1.25 0.65,1.25 {_e_cx[2]:.3f},{_e_ys[2]:.3f}",
     xref="paper", yref="paper", line=dict(color="#1155cc", width=2))
-# Arrowheads at arc endpoints
+# Arrowheads colinear with arc tangent at endpoint.
+# LC tangent (P2→P3): paper (0.34→0.433, 1.05→_e_ys[1]) → screen ~(-20px, -15px) upper-left
+# LR tangent (P2→P3): paper (0.65→0.767, 1.25→_e_ys[2]) → screen ~(-15px, -20px) upper-left
 fig_iq.add_annotation(x=_e_cx[1], y=_e_ys[1], xref="paper", yref="paper",
-    ax=-15, ay=-18, axref="pixel", ayref="pixel",
+    ax=-20, ay=-15, axref="pixel", ayref="pixel",
     text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowcolor="#1155cc")
 fig_iq.add_annotation(x=_e_cx[2], y=_e_ys[2], xref="paper", yref="paper",
-    ax=-15, ay=-18, axref="pixel", ayref="pixel",
+    ax=-15, ay=-20, axref="pixel", ayref="pixel",
     text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowcolor="#1155cc")
-# Labels: below arcs, integer format
-fig_iq.add_annotation(x=0.18, y=1.05, xref="paper", yref="paper",
+# Labels below arcs, at x-midpoint of each arc span
+fig_iq.add_annotation(x=(_e_cx[0]+_e_cx[1])/2, y=1.05, xref="paper", yref="paper",
     text=f"<b>{_iq_mult_lc:.0f}X</b>", showarrow=False,
     font=dict(color="#1155cc", size=13), yanchor="top")
-fig_iq.add_annotation(x=0.37, y=1.25, xref="paper", yref="paper",
+fig_iq.add_annotation(x=(_e_cx[0]+_e_cx[2])/2, y=1.25, xref="paper", yref="paper",
     text=f"<b>{_iq_mult_lr:.0f}X</b>", showarrow=False,
     font=dict(color="#1155cc", size=13), yanchor="top")
 # Red bezier curves: top-right of Electrons → center of Nucleons
@@ -581,11 +583,13 @@ for i, (e_val, n_val) in enumerate(zip(_iq_ev, _iq_nv)):
     ex_r, nx_c = _e_rx[i], _n_cx[i]
     mid_y = (ey + ny) / 2
     growth_str = f"{e_val / n_val / 1000:.1f}K X"
+    # Bezier reversed: Nucleons→Electrons, so endpoint (ex_r,ey) has upward tangent (P2→P3=(0,+))
     fig_iq.add_shape(type="path",
-        path=f"M {ex_r:.3f},{ey:.3f} C {nx_c:.3f},{ey:.3f} {nx_c:.3f},{mid_y:.3f} {nx_c:.3f},{ny:.3f}",
+        path=f"M {nx_c:.3f},{ny:.3f} C {nx_c:.3f},{mid_y:.3f} {ex_r:.3f},{mid_y:.3f} {ex_r:.3f},{ey:.3f}",
         xref="paper", yref="paper", line=dict(color="#cc2200", width=1.5))
+    # Arrowhead colinear: tangent at endpoint is straight UP → tail directly below (ay=+20)
     fig_iq.add_annotation(x=ex_r, y=ey, xref="paper", yref="paper",
-        ax=0, ay=18, axref="pixel", ayref="pixel",
+        ax=0, ay=20, axref="pixel", ayref="pixel",
         text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowsize=1.5, arrowcolor="#cc2200")
     fig_iq.add_annotation(x=nx_c, y=mid_y, xref="paper", yref="paper",
         text=f"<b>{growth_str}</b>", showarrow=False,
@@ -644,19 +648,21 @@ for i, lbl in enumerate(_labs3):
     sx   = _pw_e_xs[i]    # start: horizontally centered on Electrons column
     gx   = _pw_g_lxs[i]  # end: top-left corner of GovNukes bar
     mid_y = (e_py + g_py) / 2
-    # S-curve: rise straight up from E center, then bend right to G left edge
-    path = f"M {sx:.4f},{e_py:.3f} C {sx:.4f},{mid_y:.3f} {gx:.4f},{mid_y:.3f} {gx:.4f},{g_py:.3f}"
+    # L-curve: rise vertically from E center, then turn horizontal to G left edge top.
+    # P0=(sx,e_py) P1=(sx,g_py) P2=(gx-0.01,g_py) P3=(gx,g_py)
+    # Tangent at start: upward. Tangent at end: rightward (P3-P2=(0.01,0)).
+    path = f"M {sx:.4f},{e_py:.3f} C {sx:.4f},{g_py:.3f} {gx-0.01:.4f},{g_py:.3f} {gx:.4f},{g_py:.3f}"
     fig_pw.add_shape(type="path", path=path, xref="paper", yref="paper",
         line=dict(color="#cc2200", width=1.5))
-    # Arrowhead at GovNukes top-left corner, arriving straight from below
+    # Arrowhead colinear: tangent at endpoint is rightward → tail to the left (ax=-20, ay=0)
     fig_pw.add_annotation(x=gx, y=g_py, xref="paper", yref="paper",
-        ax=0, ay=15, axref="pixel", ayref="pixel",
+        ax=-20, ay=0, axref="pixel", ayref="pixel",
         text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowsize=1.5, arrowcolor="#cc2200")
     ratio_str = f"{round((g_v/e_v)/1000)}K X"
-    # Label: top-aligned with arrowhead, just to the left
+    # Label: above arrow end, to the left of arrowhead
     fig_pw.add_annotation(x=gx - 0.005, y=g_py, xref="paper", yref="paper",
         text=f"<b>{ratio_str}</b>", showarrow=False,
-        font=dict(color="#cc2200", size=11), xanchor="right", yanchor="top")
+        font=dict(color="#cc2200", size=11), xanchor="right", yanchor="bottom")
 for i, lbl in enumerate(_labs3):
     fig_pw.add_annotation(x=(4*i+1.5)/12, y=1.04, xref="paper", yref="paper",
         text=f"<b>{lbl}</b>", showarrow=False, yanchor="bottom",
