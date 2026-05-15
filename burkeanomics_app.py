@@ -16,7 +16,7 @@ st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_s
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.09</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.10</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -537,8 +537,9 @@ fig_iq.add_trace(go.Bar(name="Nucleons", x=_labs3, y=_iq_nv, marker_color="#4477
 # (xref="x"/yref="y" with categorical axis is unreliable for shapes/annotations;
 #  all-paper coords sidestep this entirely)
 _all_iq = _iq_ev + _iq_nv
-_iq_log_lo = math.floor(math.log10(min(_all_iq)))
-_iq_log_hi = math.log10(max(_all_iq)) + 0.4
+_iq_log_span = math.log10(max(_all_iq)) - math.log10(min(_all_iq))
+_iq_log_lo = math.log10(min(_all_iq)) - 0.05 * _iq_log_span
+_iq_log_hi = math.log10(max(_all_iq)) + 0.05 * _iq_log_span
 def _iq_py(v):
     return (math.log10(v) - _iq_log_lo) / (_iq_log_hi - _iq_log_lo)
 _e_ys = [_iq_py(v) for v in _iq_ev]   # Electrons bar top paper y
@@ -566,13 +567,13 @@ fig_iq.add_annotation(x=_e_cx[1], y=_e_ys[1], xref="paper", yref="paper",
 fig_iq.add_annotation(x=_e_cx[2], y=_e_ys[2], xref="paper", yref="paper",
     ax=-15, ay=-18, axref="pixel", ayref="pixel",
     text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowcolor="#1155cc")
-# Labels: LC label left (x=0.18) to stay clear of LR; LR label 50% closer to left (x=0.37)
+# Labels: below arcs, integer format
 fig_iq.add_annotation(x=0.18, y=1.05, xref="paper", yref="paper",
-    text=f"<b>{_iq_mult_lc:.1f}X</b>", showarrow=False,
-    font=dict(color="#1155cc", size=13), yanchor="bottom")
+    text=f"<b>{_iq_mult_lc:.0f}X</b>", showarrow=False,
+    font=dict(color="#1155cc", size=13), yanchor="top")
 fig_iq.add_annotation(x=0.37, y=1.25, xref="paper", yref="paper",
-    text=f"<b>{_iq_mult_lr:.1f}X</b>", showarrow=False,
-    font=dict(color="#1155cc", size=13), yanchor="bottom")
+    text=f"<b>{_iq_mult_lr:.0f}X</b>", showarrow=False,
+    font=dict(color="#1155cc", size=13), yanchor="top")
 # Red bezier curves: top-right of Electrons → center of Nucleons
 # Arrowhead flipped to TOP (Electrons end); label shows growth factor (E >> N)
 for i, (e_val, n_val) in enumerate(zip(_iq_ev, _iq_nv)):
@@ -583,21 +584,19 @@ for i, (e_val, n_val) in enumerate(zip(_iq_ev, _iq_nv)):
     fig_iq.add_shape(type="path",
         path=f"M {ex_r:.3f},{ey:.3f} C {nx_c:.3f},{ey:.3f} {nx_c:.3f},{mid_y:.3f} {nx_c:.3f},{ny:.3f}",
         xref="paper", yref="paper", line=dict(color="#cc2200", width=1.5))
-    # Arrowhead at Electrons top-right, tail below (arrow points UP into Electrons bar)
     fig_iq.add_annotation(x=ex_r, y=ey, xref="paper", yref="paper",
-        ax=0, ay=15, axref="pixel", ayref="pixel",
-        text="", showarrow=True, arrowhead=2, arrowwidth=1.5, arrowcolor="#cc2200")
-    # Growth factor label at mid-curve, right of bezier
+        ax=0, ay=18, axref="pixel", ayref="pixel",
+        text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowsize=1.5, arrowcolor="#cc2200")
     fig_iq.add_annotation(x=nx_c, y=mid_y, xref="paper", yref="paper",
         text=f"<b>{growth_str}</b>", showarrow=False,
-        font=dict(color="#cc2200", size=9), xanchor="left", xshift=4)
+        font=dict(color="#cc2200", size=13), xanchor="left", xshift=4)
 fig_iq.update_layout(
     barmode="group", height=540, showlegend=False,
     uniformtext=dict(minsize=8, mode="hide"),
     title=dict(text="Total IQ", x=0.5, font=dict(size=16)),
-    yaxis=dict(type="log", title="Total IQ"),
+    yaxis=dict(type="log"),
     xaxis=dict(tickvals=_labs3, ticktext=_labs3),
-    margin=dict(b=80, t=150))
+    margin=dict(b=100, t=150))
 fig_iq.add_annotation(**_FOOTER_ANNOTATION)
 
 # ---- Chart: Power Per Capita (log scale, new) ----
@@ -629,8 +628,9 @@ for cls in _pw_cls:
         textposition="inside", textfont=dict(color=_pw_txt_clr[cls], size=9)))
 # GovNukes/Electrons ratio arrows — bezier arcs from 50%-between-E-and-G to GovNukes top-left
 _all_pw_vals = [v for cls in _pw_cls for v in _pw_vals[cls]]
-_pw_log_lo = math.floor(math.log10(min(_all_pw_vals)))
-_pw_log_hi = math.log10(max(_all_pw_vals)) + 0.4
+_pw_log_span = math.log10(max(_all_pw_vals)) - math.log10(min(_all_pw_vals))
+_pw_log_lo = math.log10(min(_all_pw_vals)) - 0.05 * _pw_log_span
+_pw_log_hi = math.log10(max(_all_pw_vals)) + 0.05 * _pw_log_span
 def _pw_py(v):
     return (math.log10(v) - _pw_log_lo) / (_pw_log_hi - _pw_log_lo)
 # PPC paper x positions (12 cats, axis [-0.5,11.5]): E at cats 0,4,8; G at cats 1,5,9
@@ -641,22 +641,22 @@ for i, lbl in enumerate(_labs3):
     g_v = _pw_vals["GovNukes"][i]
     e_py = _pw_py(e_v)
     g_py = _pw_py(g_v)
-    sx   = (_pw_e_xs[i] + _pw_g_lxs[i]) / 2   # start: 50% between E center and G left edge
-    gx   = _pw_g_lxs[i]                          # end: top-left corner of GovNukes bar
+    sx   = _pw_e_xs[i]    # start: horizontally centered on Electrons column
+    gx   = _pw_g_lxs[i]  # end: top-left corner of GovNukes bar
     mid_y = (e_py + g_py) / 2
-    bow_x = sx - 0.04                             # bow arc leftward for visible curve
-    # Bezier arc bowing leftward from arc start up to GovNukes top-left corner
-    path = f"M {sx:.4f},{e_py:.3f} C {bow_x:.4f},{mid_y:.3f} {bow_x:.4f},{mid_y:.3f} {gx:.4f},{g_py:.3f}"
+    # S-curve: rise straight up from E center, then bend right to G left edge
+    path = f"M {sx:.4f},{e_py:.3f} C {sx:.4f},{mid_y:.3f} {gx:.4f},{mid_y:.3f} {gx:.4f},{g_py:.3f}"
     fig_pw.add_shape(type="path", path=path, xref="paper", yref="paper",
         line=dict(color="#cc2200", width=1.5))
-    # Arrowhead at GovNukes top-left corner, arriving from lower-left
+    # Arrowhead at GovNukes top-left corner, arriving straight from below
     fig_pw.add_annotation(x=gx, y=g_py, xref="paper", yref="paper",
-        ax=-12, ay=12, axref="pixel", ayref="pixel",
-        text="", showarrow=True, arrowhead=2, arrowwidth=1.5, arrowcolor="#cc2200")
+        ax=0, ay=15, axref="pixel", ayref="pixel",
+        text="", showarrow=True, arrowhead=2, arrowwidth=2, arrowsize=1.5, arrowcolor="#cc2200")
     ratio_str = f"{round((g_v/e_v)/1000)}K X"
-    fig_pw.add_annotation(x=sx - 0.005, y=e_py, xref="paper", yref="paper",
+    # Label: top-aligned with arrowhead, just to the left
+    fig_pw.add_annotation(x=gx - 0.005, y=g_py, xref="paper", yref="paper",
         text=f"<b>{ratio_str}</b>", showarrow=False,
-        font=dict(color="#cc2200", size=11), xanchor="right", yanchor="middle")
+        font=dict(color="#cc2200", size=11), xanchor="right", yanchor="top")
 for i, lbl in enumerate(_labs3):
     fig_pw.add_annotation(x=(4*i+1.5)/12, y=1.04, xref="paper", yref="paper",
         text=f"<b>{lbl}</b>", showarrow=False, yanchor="bottom",
