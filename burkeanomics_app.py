@@ -46,9 +46,10 @@ if st.sidebar.button("🔄 Reset"):
 _ch = lambda t: st.markdown(f"<p style='text-align:center;font-size:0.8rem;font-weight:600;color:#888;margin:0 0 4px 0'>{t}</p>", unsafe_allow_html=True)
 
 with st.sidebar.expander("**🌐 Constants**", expanded=False):
-    st.caption("Anchors everything else derives from")
-    households = st.number_input("California Households (Electrons)", value=13970000, step=10000, key="households")
-    energy = st.number_input("Per Capita Electron Power ($)", value=6378, step=10, key="energy")
+    st.caption("Anchors Everything")
+    households = st.number_input("Electrons", value=13970000, step=10000, key="households")
+    energy = st.number_input("Electron Power per Capita", value=6378, step=10, key="energy")
+    st.markdown(f"<p style='text-align:center;font-size:0.85em;color:#888;margin-top:-8px'>${energy:,.0f}</p>", unsafe_allow_html=True)
     base_iq = st.number_input("Base IQ", value=100, step=1, key="base_iq")
 
 with st.sidebar.expander("**🧬 Per Capita Nucleon Attributes**", expanded=False):
@@ -318,7 +319,7 @@ def calculate_breakdown(scen: str):
 SCENARIOS = [("cCon (Left)", "Left"), ("Center", "Center"), ("dCon (Right)", "Right")]
 
 # ====================== CHARTS ======================
-_FOOTER = "© 2026 David Burkean • All Rights Reserved • Credited Sharing Encouraged"
+_FOOTER = "© 2026 David Burkean • Sharing is caring • All Rights Reserved"
 _FOOTER_ANNOTATION = dict(
     text=_FOOTER, xref="paper", yref="paper", x=0.5, y=-0.28,
     showarrow=False, font=dict(size=10, color="#666"), align="center"
@@ -732,5 +733,5 @@ with st.expander("BrainPower by Class", expanded=False):
                 hide_index=True
             )
 
-footer = "© 2026 David Burkean • All Rights Reserved • Credited Sharing Encouraged"
+footer = "© 2026 David Burkean • Sharing is caring • All Rights Reserved"
 st.markdown(f"<div style='text-align: center; color: #666; padding: 20px 0; font-size: 0.9em; border-top: 1px solid #ddd;'>{footer}</div>", unsafe_allow_html=True)
