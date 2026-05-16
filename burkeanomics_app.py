@@ -16,7 +16,7 @@ st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_s
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.13</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.14</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -512,7 +512,7 @@ for sep in [1.5, 3.5]:
     fig_en.add_vline(x=sep, line_width=1, line_color="#bbb")
 fig_en.update_layout(
     barmode="stack", height=500, showlegend=False,
-    title=dict(text="Electron v Nucleon BrainPower", x=0.5, font=dict(size=16)),
+    title=dict(text="Electrons v Nucleonic BrainPower", x=0.5, font=dict(size=16)),
     uniformtext=dict(minsize=8, mode="hide"),
     xaxis=dict(categoryorder="array", categoryarray=_x3_order,
                ticktext=["Electrons", "Nucleons"] * 3, tickvals=_x3_order),
@@ -588,12 +588,12 @@ for i, (e_val, n_val) in enumerate(zip(_iq_ev, _iq_nv)):
         x0=ex_r-0.004, y0=ey-0.009, x1=ex_r+0.004, y1=ey+0.009,
         xref="paper", yref="paper", fillcolor="#cc2200", line_color="#cc2200")
     fig_iq.add_annotation(x=nx_c, y=mid_y, xref="paper", yref="paper",
-        text=f"<b>{growth_str}</b>", showarrow=False,
+        text=f"<b>{growth_str}</b><br>Electron Advantage", showarrow=False,
         font=dict(color="#cc2200", size=13), xanchor="left", xshift=4)
 fig_iq.update_layout(
     barmode="group", height=540, showlegend=False,
     uniformtext=dict(minsize=8, mode="hide"),
-    title=dict(text="Total IQ", x=0.5, font=dict(size=16)),
+    title=dict(text="Total Applicable IQ", x=0.5, font=dict(size=16)),
     yaxis=dict(type="log"),
     xaxis=dict(tickvals=_labs3, ticktext=_labs3),
     margin=dict(b=100, t=150))
