@@ -16,7 +16,7 @@ st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_s
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.17</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.18</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -352,7 +352,7 @@ with st.expander("Electron Throttles", expanded=True):
         st.slider("Center", 0, 99, 50, 1, format="%d%%", key="th_center")
     with _et_r:
         st.slider("Right · dCon", 0, 99, 25, 1, format="%d%%", key="th_dcon")
-    st.markdown("<p style='text-align:center;font-weight:600;font-size:1.0em;margin:16px 0 4px 0'>Applicable Total IQ</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center;font-weight:600;font-size:1.0em;margin:16px 0 4px 0'>Throttled IQ</p>", unsafe_allow_html=True)
     _tiq_data = []
     for _s, _l in SCENARIOS:
         _dfem_t = calculate_en_masse(_s).set_index("Class")
