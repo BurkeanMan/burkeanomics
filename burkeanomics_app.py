@@ -16,7 +16,7 @@ st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_s
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.15</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.16</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -356,11 +356,10 @@ with st.expander("Electron Throttles", expanded=True):
     _tiq_data = []
     for _s, _l in SCENARIOS:
         _dfem_t = calculate_en_masse(_s).set_index("Class")
-        _e_iq_t = float(_dfem_t.loc["Electrons (throttled)", "Total IQ"])
-        _n_iq_t = (float(_dfem_t.loc["GovNukes",  "Total IQ"]) +
-                   float(_dfem_t.loc["Providers", "Total IQ"]) +
-                   float(_dfem_t.loc["SinSayers", "Total IQ"]))
-        _tiq_data.append((_l, _e_iq_t, _n_iq_t, _e_iq_t + _n_iq_t))
+        _e_iq_t   = float(_dfem_t.loc["Electrons (throttled)",   "Total IQ"])
+        _unth_iq_t = float(_dfem_t.loc["Electrons (unthrottled)", "Total IQ"])
+        _n_iq_t   = _unth_iq_t - _e_iq_t   # IQ suppressed by throttle
+        _tiq_data.append((_l, _e_iq_t, _n_iq_t, _unth_iq_t))
     _tiq_y_max = max(d[3] for d in _tiq_data) * 1.18
     _tiq_lbl_clr = "white" if st.session_state.get("dark_mode", False) else "black"
     _tiq_xlbls = ["Left\ncCon", "Center", "Right\ndCon"]
