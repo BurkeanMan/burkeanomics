@@ -16,7 +16,7 @@ st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_s
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.14</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.15</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -352,6 +352,40 @@ with st.expander("Electron Throttles", expanded=True):
         st.slider("Center", 0, 99, 50, 1, format="%d%%", key="th_center")
     with _et_r:
         st.slider("Right · dCon", 0, 99, 25, 1, format="%d%%", key="th_dcon")
+    st.markdown("<p style='text-align:center;font-weight:600;font-size:1.0em;margin:16px 0 4px 0'>Electrons' Applicable Total IQ</p>", unsafe_allow_html=True)
+    _tiq_data = []
+    for _s, _l in SCENARIOS:
+        _dfem_t = calculate_en_masse(_s).set_index("Class")
+        _e_iq_t = float(_dfem_t.loc["Electrons (throttled)", "Total IQ"])
+        _n_iq_t = (float(_dfem_t.loc["GovNukes",  "Total IQ"]) +
+                   float(_dfem_t.loc["Providers", "Total IQ"]) +
+                   float(_dfem_t.loc["SinSayers", "Total IQ"]))
+        _tiq_data.append((_l, _e_iq_t, _n_iq_t, _e_iq_t + _n_iq_t))
+    _tiq_y_max = max(d[3] for d in _tiq_data) * 1.18
+    _tiq_lbl_clr = "white" if st.session_state.get("dark_mode", False) else "black"
+    _tiq_xlbls = ["Left\ncCon", "Center", "Right\ndCon"]
+    _tiq_cols = st.columns(3)
+    for _ci, ((_l, _e_iq_t, _n_iq_t, _tot_t), _col_w, _xlbl) in enumerate(zip(_tiq_data, _tiq_cols, _tiq_xlbls)):
+        _fig_t = go.Figure()
+        _fig_t.add_trace(go.Bar(
+            x=[_xlbl], y=[_e_iq_t], marker_color="#00008B",
+            text=[f"<b>Electron<br>Controlled</b><br>{_e_iq_t:,.0f}"],
+            textposition="inside", textfont=dict(color="white", size=9), showlegend=False))
+        _fig_t.add_trace(go.Bar(
+            x=[_xlbl], y=[_n_iq_t], marker_color="#FFD700",
+            text=[f"<b>Nucleon<br>Controlled</b><br>{_n_iq_t:,.0f}"],
+            textposition="inside", textfont=dict(color="#333", size=9), showlegend=False))
+        _fig_t.add_annotation(x=_xlbl, y=_tot_t, text=f"<b>{_tot_t:,.0f}</b>",
+            showarrow=False, yshift=10, font=dict(size=10, color=_tiq_lbl_clr))
+        _fig_t.update_layout(
+            barmode="stack", height=280, showlegend=False,
+            margin=dict(t=10, b=40, l=50 if _ci == 0 else 10, r=10),
+            yaxis=dict(showticklabels=_ci == 0, showgrid=True, gridcolor="#ddd",
+                       range=[0, _tiq_y_max], tickformat=","),
+            xaxis=dict(showticklabels=True),
+            plot_bgcolor="white")
+        with _col_w:
+            st.plotly_chart(_fig_t, use_container_width=True)
 
 compare_df = pd.DataFrame([
     {"Scenario": label, "Total tBP (Trillions Smart $)": calculate_breakdown(scen)[1]}
@@ -588,7 +622,7 @@ for i, (e_val, n_val) in enumerate(zip(_iq_ev, _iq_nv)):
         x0=ex_r-0.004, y0=ey-0.009, x1=ex_r+0.004, y1=ey+0.009,
         xref="paper", yref="paper", fillcolor="#cc2200", line_color="#cc2200")
     fig_iq.add_annotation(x=nx_c, y=mid_y, xref="paper", yref="paper",
-        text=f"<b>{growth_str}</b><br>Electron Advantage", showarrow=False,
+        text=f"<b>{growth_str}</b><br>Electron<br>Advantage", showarrow=False,
         font=dict(color="#cc2200", size=13), xanchor="left", xshift=4)
 fig_iq.update_layout(
     barmode="group", height=540, showlegend=False,
