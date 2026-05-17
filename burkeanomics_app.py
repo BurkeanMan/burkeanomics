@@ -30,7 +30,7 @@ _components.html("""<script>
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.24</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.25</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -352,7 +352,7 @@ st.markdown(
     "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
     "<a href='#power' style='color:#1155cc;text-decoration:none;'>Power</a>"
     "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
-    "<a href='#population' style='color:#1155cc;text-decoration:none;'>Population</a>"
+    "<a href='#population' style='color:#1155cc;text-decoration:none;'>Populations</a>"
     "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
     "<a href='#tables' style='color:#1155cc;text-decoration:none;'>Tables</a>"
     "</div>",
@@ -763,7 +763,7 @@ with st.expander("Power", expanded=False):
 
 # ====================== POPULATION ======================
 st.markdown('<div id="population"></div>', unsafe_allow_html=True)
-with st.expander("Population", expanded=False):
+with st.expander("Populations", expanded=False):
     _hh = st.session_state.get("households", 13970000)
     _fig_epop = go.Figure()
     _fig_epop.add_trace(go.Bar(x=_labs3, y=[_hh]*3, marker_color="#00008B",
