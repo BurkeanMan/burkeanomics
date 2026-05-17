@@ -87,7 +87,7 @@ _components.html("""<script>
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.31</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.32</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -473,14 +473,15 @@ with st.expander("Electron Throttles", expanded=not _is_mobile):
         st.slider("Right · dCon", 0, 99, 25, 1, format="%d%%", key="th_dcon",
                   on_change=lambda: _scale_mechs("d"))
     with st.expander("Mechanisms", expanded=False):
+        st.markdown("<style>section[data-testid='stMain'] div[data-testid='stNumberInput'] input{text-align:center}</style>", unsafe_allow_html=True)
         _mh = st.columns([1.5, 0.8, 2.6, 2.6, 2.6])
-        for _mc, _mt in zip(_mh, ["Mechanism", "Weight", "Left · cCon", "Center", "Right · dCon"]):
+        for _mc, _mt in zip(_mh, ["", "Weight", "Left · cCon", "Center", "Right · dCon"]):
             _mc.markdown(f"<div style='text-align:center;font-weight:600'>{_mt}</div>", unsafe_allow_html=True)
         for _m in _MECHS:
             _lo, _hi = _MECH_DIR[_m]
             _dir_lbl = f"← {_lo}  ·  {_hi} →"
             _mc = st.columns([1.5, 0.8, 2.6, 2.6, 2.6])
-            _mc[0].markdown(f"<div style='text-align:center;font-weight:600;padding-top:28px'>{_MECH_LBL[_m]}</div>", unsafe_allow_html=True)
+            _mc[0].markdown(f"<div style='text-align:left;font-weight:600;padding-top:28px'>{_MECH_LBL[_m]}</div>", unsafe_allow_html=True)
             _mc[1].number_input("wt", min_value=0, max_value=5, value=_MECH_DEF[_m][3],
                                 step=1, key=f"mech_weight_{_m}", on_change=_sync_all_th,
                                 label_visibility="collapsed")
