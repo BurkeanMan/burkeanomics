@@ -30,7 +30,7 @@ _components.html("""<script>
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.22</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.23</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -351,6 +351,8 @@ st.markdown(
     "<a href='#brains' style='color:#1155cc;text-decoration:none;'>Brains</a>"
     "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
     "<a href='#power' style='color:#1155cc;text-decoration:none;'>Power</a>"
+    "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
+    "<a href='#population' style='color:#1155cc;text-decoration:none;'>Population</a>"
     "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
     "<a href='#tables' style='color:#1155cc;text-decoration:none;'>Tables</a>"
     "</div>",
@@ -735,6 +737,59 @@ with st.expander("Brains", expanded=False):
 st.markdown('<div id="power"></div>', unsafe_allow_html=True)
 with st.expander("Power", expanded=False):
     st.plotly_chart(fig_pw, use_container_width=True)
+    # Per-class per capita power charts
+    _npc_defs = [("GovNukes", "#FFD700", "#333333"), ("Providers", "#228B22", "white"), ("SinSayers", "#8B0000", "white")]
+    _npc_data = {cls: [] for cls, _, _ in _npc_defs}
+    for _s, _ in SCENARIOS:
+        _dfpc_n = calculate_per_capita(_s).set_index("Class")
+        for cls, _, _ in _npc_defs:
+            _npc_data[cls].append(float(_dfpc_n.loc[cls, "Power ($)"]))
+    _npc_cols = st.columns(3)
+    for (cls, _bc, _tc), _cw in zip(_npc_defs, _npc_cols):
+        _fig_npc = go.Figure()
+        _fig_npc.add_trace(go.Bar(x=_labs3, y=_npc_data[cls], marker_color=_bc,
+            text=[f"${v:,.0f}" for v in _npc_data[cls]],
+            textposition="inside", textfont=dict(color=_tc, size=10), showlegend=False))
+        _fig_npc.update_layout(
+            title=dict(text=f"{cls}' Per Capita Power", x=0.5, xanchor="center", font=dict(size=14)),
+            height=280, showlegend=False, margin=dict(t=55, b=40, l=60, r=10),
+            yaxis=dict(tickprefix="$", tickformat=",.0f"), plot_bgcolor="white")
+        with _cw:
+            st.plotly_chart(_fig_npc, use_container_width=True)
+
+# ====================== POPULATION ======================
+st.markdown('<div id="population"></div>', unsafe_allow_html=True)
+with st.expander("Population", expanded=False):
+    _hh = st.session_state.get("households", 13970000)
+    _fig_epop = go.Figure()
+    _fig_epop.add_trace(go.Bar(x=_labs3, y=[_hh]*3, marker_color="#00008B",
+        text=[f"{_hh:,.0f}"]*3,
+        textposition="inside", textfont=dict(color="white", size=11), showlegend=False))
+    _fig_epop.update_layout(
+        title=dict(text="Electron Population", x=0.5, xanchor="center", font=dict(size=14)),
+        height=240, showlegend=False, margin=dict(t=55, b=40, l=70, r=10),
+        yaxis=dict(tickformat=","), plot_bgcolor="white")
+    _, _ep_m, _ = st.columns([1, 2, 1])
+    with _ep_m:
+        st.plotly_chart(_fig_epop, use_container_width=True)
+    _pop_g = [st.session_state.get("pop_g_c", 14), st.session_state.get("pop_g_center", 13), st.session_state.get("pop_g_d", 8)]
+    _pop_p = [st.session_state.get("pop_p_c", 35), st.session_state.get("pop_p_center", 40), st.session_state.get("pop_p_d", 55)]
+    _pop_s = [st.session_state.get("pop_s_c", 60), st.session_state.get("pop_s_center", 50), st.session_state.get("pop_s_d", 15)]
+    _pop_defs = [("GovNukes per Electron", "#FFD700", "#333333", _pop_g),
+                 ("Providers per Electron", "#228B22", "white",   _pop_p),
+                 ("SinSayers per Electron", "#8B0000", "white",   _pop_s)]
+    _pop_cols = st.columns(3)
+    for (title, _bc, _tc, vals), _cw in zip(_pop_defs, _pop_cols):
+        _fig_pop = go.Figure()
+        _fig_pop.add_trace(go.Bar(x=_labs3, y=vals, marker_color=_bc,
+            text=[str(v) for v in vals],
+            textposition="inside", textfont=dict(color=_tc, size=11), showlegend=False))
+        _fig_pop.update_layout(
+            title=dict(text=title, x=0.5, xanchor="center", font=dict(size=14)),
+            height=240, showlegend=False, margin=dict(t=55, b=40, l=50, r=10),
+            plot_bgcolor="white")
+        with _cw:
+            st.plotly_chart(_fig_pop, use_container_width=True)
 
 # ====================== TABLES ======================
 st.markdown('<div id="tables"></div>', unsafe_allow_html=True)
