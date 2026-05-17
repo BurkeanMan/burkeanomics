@@ -18,19 +18,52 @@ st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_s
 _sw = st.query_params.get("sw", "p")
 _is_mobile = _sw == "m"
 _components.html("""<script>
+(function() {
+    // Mobile detection: set ?sw= query param and redirect once
     var w = window.parent.innerWidth;
     var target = w < 768 ? 'm' : 'p';
     var url = new URL(window.parent.location.href);
     if (url.searchParams.get('sw') !== target) {
         url.searchParams.set('sw', target);
         window.parent.location.replace(url.toString());
+        return;
     }
+
+    // TOC link → open matching expander
+    var hashToLabel = {
+        '#throttles':   'Electron Throttles',
+        '#brainpower':  'BrainPower',
+        '#brains':      'Brains',
+        '#power':       'Power',
+        '#population':  'Populations'
+    };
+    function openExpander(hash) {
+        var label = hashToLabel[hash];
+        if (!label) return;
+        var all = window.parent.document.querySelectorAll('details');
+        for (var i = 0; i < all.length; i++) {
+            var s = all[i].querySelector('summary');
+            if (s && s.textContent.trim().indexOf(label) >= 0 && !all[i].open) {
+                s.click();
+                // Re-scroll after expander opens
+                setTimeout(function() {
+                    var anchor = window.parent.document.querySelector('[id="' + hash.slice(1) + '"]');
+                    if (anchor) anchor.scrollIntoView({behavior: 'smooth'});
+                }, 150);
+                break;
+            }
+        }
+    }
+    window.parent.addEventListener('hashchange', function() {
+        setTimeout(function() { openExpander(window.parent.location.hash); }, 80);
+    });
+})();
 </script>""", height=0)
 
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.26</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.27</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
