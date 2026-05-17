@@ -14,6 +14,12 @@ if "_import_pending" in st.session_state:
 
 st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="expanded")
 
+# Force one silent rerun on first load so all React expander handlers are hydrated
+# before the user tries to open sections via TOC links.
+if "initialized" not in st.session_state:
+    st.session_state["initialized"] = True
+    st.rerun()
+
 # Detect screen width via JS; sets ?sw=m (mobile) or ?sw=p (tablet/desktop) on first load.
 _sw = st.query_params.get("sw", "p")
 _is_mobile = _sw == "m"
@@ -81,7 +87,7 @@ _components.html("""<script>
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.28</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.29</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
