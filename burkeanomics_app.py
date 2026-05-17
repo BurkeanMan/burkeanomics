@@ -30,7 +30,7 @@ _components.html("""<script>
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.23</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.24</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -744,8 +744,10 @@ with st.expander("Power", expanded=False):
         _dfpc_n = calculate_per_capita(_s).set_index("Class")
         for cls, _, _ in _npc_defs:
             _npc_data[cls].append(float(_dfpc_n.loc[cls, "Power ($)"]))
+    _ps_ymax = max(max(_npc_data["Providers"]), max(_npc_data["SinSayers"])) * 1.1
     _npc_cols = st.columns(3)
     for (cls, _bc, _tc), _cw in zip(_npc_defs, _npc_cols):
+        _yrange = [0, _ps_ymax] if cls in ("Providers", "SinSayers") else None
         _fig_npc = go.Figure()
         _fig_npc.add_trace(go.Bar(x=_labs3, y=_npc_data[cls], marker_color=_bc,
             text=[f"${v:,.0f}" for v in _npc_data[cls]],
@@ -753,7 +755,9 @@ with st.expander("Power", expanded=False):
         _fig_npc.update_layout(
             title=dict(text=f"{cls}' Per Capita Power", x=0.5, xanchor="center", font=dict(size=14)),
             height=280, showlegend=False, margin=dict(t=55, b=40, l=60, r=10),
-            yaxis=dict(tickprefix="$", tickformat=",.0f"), plot_bgcolor="white")
+            yaxis=dict(tickprefix="$", tickformat=",.0f",
+                       **({} if _yrange is None else {"range": _yrange})),
+            plot_bgcolor="white")
         with _cw:
             st.plotly_chart(_fig_npc, use_container_width=True)
 
@@ -766,7 +770,7 @@ with st.expander("Population", expanded=False):
         text=[f"{_hh:,.0f}"]*3,
         textposition="inside", textfont=dict(color="white", size=11), showlegend=False))
     _fig_epop.update_layout(
-        title=dict(text="Electron Population", x=0.5, xanchor="center", font=dict(size=14)),
+        title=dict(text="Electrons", x=0.5, xanchor="center", font=dict(size=14)),
         height=240, showlegend=False, margin=dict(t=55, b=40, l=70, r=10),
         yaxis=dict(tickformat=","), plot_bgcolor="white")
     _, _ep_m, _ = st.columns([1, 2, 1])
