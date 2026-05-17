@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as _components
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -13,10 +14,23 @@ if "_import_pending" in st.session_state:
 
 st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="expanded")
 
+# Detect screen width via JS; sets ?sw=m (mobile) or ?sw=p (tablet/desktop) on first load.
+_sw = st.query_params.get("sw", "p")
+_is_mobile = _sw == "m"
+_components.html("""<script>
+    var w = window.parent.innerWidth;
+    var target = w < 768 ? 'm' : 'p';
+    var url = new URL(window.parent.location.href);
+    if (url.searchParams.get('sw') !== target) {
+        url.searchParams.set('sw', target);
+        window.parent.location.replace(url.toString());
+    }
+</script>""", height=0)
+
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.21</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.22</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -343,7 +357,7 @@ st.markdown(
     unsafe_allow_html=True)
 
 st.markdown('<div id="throttles"></div>', unsafe_allow_html=True)
-with st.expander("Electron Throttles", expanded=True):
+with st.expander("Electron Throttles", expanded=not _is_mobile):
     st.markdown("<style>div.stSlider > label { display:block; text-align:center; width:100%; }</style>", unsafe_allow_html=True)
     _et_l, _et_c, _et_r = st.columns(3)
     with _et_l:
@@ -545,12 +559,12 @@ for sep in [1.5, 3.5]:
     fig_en.add_vline(x=sep, line_width=1, line_color="#bbb")
 fig_en.update_layout(
     barmode="stack", height=500, showlegend=False,
-    title=dict(text="Electrons v Nucleonic<br>BrainPower", x=0.5, xanchor="center", font=dict(size=16)),
+    title=dict(text="Electrons v Nucleons<br>BrainPower", x=0.5, xanchor="center", font=dict(size=16)),
     uniformtext=dict(minsize=8, mode="hide"),
     xaxis=dict(categoryorder="array", categoryarray=_x3_order,
                ticktext=["Electrons", "Nucleons"] * 3, tickvals=_x3_order),
     yaxis=dict(title="tBP (Trillions Smart $)", rangemode="tozero"),
-    margin=dict(b=80, t=100))
+    margin=dict(b=80, t=130))
 fig_en.add_annotation(**_FOOTER_ANNOTATION)
 
 # ---- Chart: Total IQ (log scale, new) ----
@@ -709,7 +723,7 @@ fig_pw.add_annotation(**_FOOTER_ANNOTATION)
 
 # ---- Render sections ----
 st.markdown('<div id="brainpower"></div>', unsafe_allow_html=True)
-with st.expander("BrainPower", expanded=False):
+with st.expander("BrainPower", expanded=not _is_mobile):
     st.plotly_chart(fig_main,    use_container_width=True)
     st.plotly_chart(fig_stacked, use_container_width=True)
     st.plotly_chart(fig_en,      use_container_width=True)
