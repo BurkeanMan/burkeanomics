@@ -87,7 +87,7 @@ _components.html("""<script>
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.32</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.33</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -393,7 +393,7 @@ _MECH_LBL = {"taxes":"Tax Rates","suppliers":"Suppliers","gateways":"Gateways",
               "regulations":"Regulations","monetary":"Monetary Policy"}
 # (min label, max label) — shown as slider direction
 _MECH_DIR = {
-    "taxes":       ("Lower Rates", "Higher Rates"),
+    "taxes":       ("Lower",        "Higher"),
     "suppliers":   ("Competition",  "Monopoly"),
     "gateways":    ("Choice",       "Bureaucrats"),
     "regulations": ("Benign Neglect","Mandates"),
