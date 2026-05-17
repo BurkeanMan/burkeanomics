@@ -29,7 +29,7 @@ _components.html("""<script>
         return;
     }
 
-    // TOC link → open matching expander
+    // TOC link → open matching expander (with retry for React hydration lag)
     var hashToLabel = {
         '#throttles':   'Electron Throttles',
         '#brainpower':  'BrainPower',
@@ -37,21 +37,39 @@ _components.html("""<script>
         '#power':       'Power',
         '#population':  'Populations'
     };
-    function openExpander(hash) {
-        var label = hashToLabel[hash];
-        if (!label) return;
+    function findDetails(label) {
         var all = window.parent.document.querySelectorAll('details');
         for (var i = 0; i < all.length; i++) {
             var s = all[i].querySelector('summary');
-            if (s && s.textContent.trim().indexOf(label) >= 0 && !all[i].open) {
-                s.click();
-                // Re-scroll after expander opens
-                setTimeout(function() {
-                    var anchor = window.parent.document.querySelector('[id="' + hash.slice(1) + '"]');
-                    if (anchor) anchor.scrollIntoView({behavior: 'smooth'});
-                }, 150);
-                break;
-            }
+            if (s && s.textContent.indexOf(label) >= 0) return all[i];
+        }
+        return null;
+    }
+    function scrollToAnchor(id) {
+        var el = window.parent.document.getElementById(id);
+        if (el) el.scrollIntoView({behavior: 'smooth'});
+    }
+    function openExpander(hash, attempt) {
+        attempt = attempt || 0;
+        var label = hashToLabel[hash];
+        if (!label) return;
+        var det = findDetails(label);
+        if (!det) {
+            if (attempt < 8) setTimeout(function() { openExpander(hash, attempt + 1); }, 250);
+            return;
+        }
+        if (!det.open) {
+            det.querySelector('summary').click();
+            // Verify it actually opened; retry if React swallowed the click
+            setTimeout(function() {
+                if (!det.open && attempt < 8) {
+                    openExpander(hash, attempt + 1);
+                } else {
+                    scrollToAnchor(hash.slice(1));
+                }
+            }, 200);
+        } else {
+            scrollToAnchor(hash.slice(1));
         }
     }
     window.parent.addEventListener('hashchange', function() {
@@ -63,7 +81,7 @@ _components.html("""<script>
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.27</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.28</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
