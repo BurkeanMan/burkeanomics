@@ -16,7 +16,7 @@ st.set_page_config(page_title="Burkeanomics Simulator", layout="wide", initial_s
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.19</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.20</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -430,7 +430,7 @@ fig_main = px.bar(compare_df, x="Scenario", y="Total tBP (Trillions Smart $)",
                   color="Scenario", color_discrete_map={"Left": "#1f77b4", "Center": "#888888", "Right": "#d62728"})
 fig_main.update_traces(texttemplate="")   # labels via annotations for dark-mode safety
 fig_main.update_layout(height=520, bargap=0.25, showlegend=False,
-                       title=dict(text="Gross Total BrainPower", x=0.5, font=dict(size=16)),
+                       title=dict(text="Gross Total<br>BrainPower", x=0.5, font=dict(size=16)),
                        xaxis=_xaxis_cfg, yaxis=dict(range=[_y_min, _y_max]),
                        margin=dict(b=160, t=110))
 
@@ -489,7 +489,7 @@ for trace in fig_stacked.data:
         trace.marker.pattern.fgcolor = "rgba(0,0,0,0.12)" if trace.name == "GovNukes" else "rgba(255,255,255,0.32)"
         trace.marker.pattern.size = 8
 fig_stacked.update_layout(height=520, barmode="stack", showlegend=False,
-                          title=dict(text="Class Based BrainPower", x=0.5, font=dict(size=16)),
+                          title=dict(text="Class Based<br>BrainPower", x=0.5, font=dict(size=16)),
                           uniformtext=dict(minsize=8, mode="hide"),
                           xaxis=_xaxis_cfg, yaxis=dict(range=[0, _y_max_stack]),
                           margin=dict(b=160, t=110))
@@ -545,7 +545,7 @@ for sep in [1.5, 3.5]:
     fig_en.add_vline(x=sep, line_width=1, line_color="#bbb")
 fig_en.update_layout(
     barmode="stack", height=500, showlegend=False,
-    title=dict(text="Electrons v Nucleonic BrainPower", x=0.5, font=dict(size=16)),
+    title=dict(text="Electrons v Nucleonic<br>BrainPower", x=0.5, font=dict(size=16)),
     uniformtext=dict(minsize=8, mode="hide"),
     xaxis=dict(categoryorder="array", categoryarray=_x3_order,
                ticktext=["Electrons", "Nucleons"] * 3, tickvals=_x3_order),
