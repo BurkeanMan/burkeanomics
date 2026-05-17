@@ -87,7 +87,7 @@ _components.html("""<script>
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.30</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.31</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -389,8 +389,16 @@ def calculate_breakdown(scen: str):
 # ====================== DASH ======================
 # ====================== MECHANISMS ======================
 _MECHS = ["taxes", "suppliers", "gateways", "regulations", "monetary"]
-_MECH_LBL = {"taxes":"Taxes","suppliers":"Suppliers","gateways":"Gateways",
+_MECH_LBL = {"taxes":"Tax Rates","suppliers":"Suppliers","gateways":"Gateways",
               "regulations":"Regulations","monetary":"Monetary Policy"}
+# (min label, max label) — shown as slider direction
+_MECH_DIR = {
+    "taxes":       ("Lower Rates", "Higher Rates"),
+    "suppliers":   ("Competition",  "Monopoly"),
+    "gateways":    ("Choice",       "Bureaucrats"),
+    "regulations": ("Benign Neglect","Mandates"),
+    "monetary":    ("Firm",         "Loose"),
+}
 # (val_c, val_center, val_d, weight)
 _MECH_DEF = {"taxes":(65,55,20,3),"suppliers":(85,45,30,1),"gateways":(80,45,30,1),
               "regulations":(90,45,30,1),"monetary":(0,0,0,0)}
@@ -465,24 +473,23 @@ with st.expander("Electron Throttles", expanded=not _is_mobile):
         st.slider("Right · dCon", 0, 99, 25, 1, format="%d%%", key="th_dcon",
                   on_change=lambda: _scale_mechs("d"))
     with st.expander("Mechanisms", expanded=False):
-        _mh = st.columns([2, 0.7, 2.5, 2.5, 2.5])
-        for _mc, _mt in zip(_mh, ["Mechanism", "Wt.", "Left · cCon", "Center", "Right · dCon"]):
-            _mc.markdown(f"**{_mt}**")
+        _mh = st.columns([1.5, 0.8, 2.6, 2.6, 2.6])
+        for _mc, _mt in zip(_mh, ["Mechanism", "Weight", "Left · cCon", "Center", "Right · dCon"]):
+            _mc.markdown(f"<div style='text-align:center;font-weight:600'>{_mt}</div>", unsafe_allow_html=True)
         for _m in _MECHS:
-            _mc = st.columns([2, 0.7, 2.5, 2.5, 2.5])
-            _mc[0].markdown(f"**{_MECH_LBL[_m]}**")
+            _lo, _hi = _MECH_DIR[_m]
+            _dir_lbl = f"← {_lo}  ·  {_hi} →"
+            _mc = st.columns([1.5, 0.8, 2.6, 2.6, 2.6])
+            _mc[0].markdown(f"<div style='text-align:center;font-weight:600;padding-top:28px'>{_MECH_LBL[_m]}</div>", unsafe_allow_html=True)
             _mc[1].number_input("wt", min_value=0, max_value=5, value=_MECH_DEF[_m][3],
                                 step=1, key=f"mech_weight_{_m}", on_change=_sync_all_th,
                                 label_visibility="collapsed")
-            _mc[2].slider("lc", 0, 99, _MECH_DEF[_m][0], format="%d%%",
-                          key=f"mech_{_m}_c", on_change=lambda: _sync_th("c"),
-                          label_visibility="collapsed")
-            _mc[3].slider("ctr", 0, 99, _MECH_DEF[_m][1], format="%d%%",
-                          key=f"mech_{_m}_center", on_change=lambda: _sync_th("center"),
-                          label_visibility="collapsed")
-            _mc[4].slider("rc", 0, 99, _MECH_DEF[_m][2], format="%d%%",
-                          key=f"mech_{_m}_d", on_change=lambda: _sync_th("d"),
-                          label_visibility="collapsed")
+            _mc[2].slider(_dir_lbl, 0, 99, _MECH_DEF[_m][0], format="%d%%",
+                          key=f"mech_{_m}_c", on_change=lambda: _sync_th("c"))
+            _mc[3].slider(_dir_lbl, 0, 99, _MECH_DEF[_m][1], format="%d%%",
+                          key=f"mech_{_m}_center", on_change=lambda: _sync_th("center"))
+            _mc[4].slider(_dir_lbl, 0, 99, _MECH_DEF[_m][2], format="%d%%",
+                          key=f"mech_{_m}_d", on_change=lambda: _sync_th("d"))
     st.markdown("<p style='text-align:center;font-weight:600;font-size:1.0em;margin:16px 0 4px 0'>IQ Control</p>", unsafe_allow_html=True)
     _tiq_data = []
     for _s, _l in SCENARIOS:
