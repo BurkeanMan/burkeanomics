@@ -87,7 +87,7 @@ _components.html("""<script>
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.29</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.30</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -387,6 +387,42 @@ def calculate_breakdown(scen: str):
     return df, round(df["tBP"].sum(), 1)
 
 # ====================== DASH ======================
+# ====================== MECHANISMS ======================
+_MECHS = ["taxes", "suppliers", "gateways", "regulations", "monetary"]
+_MECH_LBL = {"taxes":"Taxes","suppliers":"Suppliers","gateways":"Gateways",
+              "regulations":"Regulations","monetary":"Monetary Policy"}
+# (val_c, val_center, val_d, weight)
+_MECH_DEF = {"taxes":(65,55,20,3),"suppliers":(85,45,30,1),"gateways":(80,45,30,1),
+              "regulations":(90,45,30,1),"monetary":(0,0,0,0)}
+_MSFX = {"c":0,"center":1,"d":2}
+_MTH  = {"c":"th_ccon","center":"th_center","d":"th_dcon"}
+
+def _th_from_mechs(sfx):
+    tw=ws=0
+    for m in _MECHS:
+        w=st.session_state.get(f"mech_weight_{m}",_MECH_DEF[m][3])
+        v=st.session_state.get(f"mech_{m}_{sfx}",_MECH_DEF[m][_MSFX[sfx]])
+        tw+=w; ws+=w*v
+    return min(99,max(0,round(ws/tw))) if tw else 50
+
+def _sync_th(sfx):
+    st.session_state[_MTH[sfx]]=_th_from_mechs(sfx)
+
+def _sync_all_th():
+    for sfx in ("c","center","d"):
+        st.session_state[_MTH[sfx]]=_th_from_mechs(sfx)
+
+def _scale_mechs(sfx):
+    new_th=st.session_state.get(_MTH[sfx],50)
+    old_th=_th_from_mechs(sfx)
+    for m in _MECHS:
+        old_v=st.session_state.get(f"mech_{m}_{sfx}",_MECH_DEF[m][_MSFX[sfx]])
+        if old_th==0:
+            w=st.session_state.get(f"mech_weight_{m}",_MECH_DEF[m][3])
+            st.session_state[f"mech_{m}_{sfx}"]=new_th if w>0 else 0
+        else:
+            st.session_state[f"mech_{m}_{sfx}"]=min(99,max(0,round(old_v*new_th/old_th)))
+
 SCENARIOS = [("cCon (Left)", "Left"), ("Center", "Center"), ("dCon (Right)", "Right")]
 
 # ====================== CHARTS ======================
@@ -420,11 +456,33 @@ with st.expander("Electron Throttles", expanded=not _is_mobile):
     st.markdown("<style>div.stSlider > label { display:block; text-align:center; width:100%; }</style>", unsafe_allow_html=True)
     _et_l, _et_c, _et_r = st.columns(3)
     with _et_l:
-        st.slider("Left · cCon", 0, 99, 75, 1, format="%d%%", key="th_ccon")
+        st.slider("Left · cCon", 0, 99, 75, 1, format="%d%%", key="th_ccon",
+                  on_change=lambda: _scale_mechs("c"))
     with _et_c:
-        st.slider("Center", 0, 99, 50, 1, format="%d%%", key="th_center")
+        st.slider("Center", 0, 99, 50, 1, format="%d%%", key="th_center",
+                  on_change=lambda: _scale_mechs("center"))
     with _et_r:
-        st.slider("Right · dCon", 0, 99, 25, 1, format="%d%%", key="th_dcon")
+        st.slider("Right · dCon", 0, 99, 25, 1, format="%d%%", key="th_dcon",
+                  on_change=lambda: _scale_mechs("d"))
+    with st.expander("Mechanisms", expanded=False):
+        _mh = st.columns([2, 0.7, 2.5, 2.5, 2.5])
+        for _mc, _mt in zip(_mh, ["Mechanism", "Wt.", "Left · cCon", "Center", "Right · dCon"]):
+            _mc.markdown(f"**{_mt}**")
+        for _m in _MECHS:
+            _mc = st.columns([2, 0.7, 2.5, 2.5, 2.5])
+            _mc[0].markdown(f"**{_MECH_LBL[_m]}**")
+            _mc[1].number_input("wt", min_value=0, max_value=5, value=_MECH_DEF[_m][3],
+                                step=1, key=f"mech_weight_{_m}", on_change=_sync_all_th,
+                                label_visibility="collapsed")
+            _mc[2].slider("lc", 0, 99, _MECH_DEF[_m][0], format="%d%%",
+                          key=f"mech_{_m}_c", on_change=lambda: _sync_th("c"),
+                          label_visibility="collapsed")
+            _mc[3].slider("ctr", 0, 99, _MECH_DEF[_m][1], format="%d%%",
+                          key=f"mech_{_m}_center", on_change=lambda: _sync_th("center"),
+                          label_visibility="collapsed")
+            _mc[4].slider("rc", 0, 99, _MECH_DEF[_m][2], format="%d%%",
+                          key=f"mech_{_m}_d", on_change=lambda: _sync_th("d"),
+                          label_visibility="collapsed")
     st.markdown("<p style='text-align:center;font-weight:600;font-size:1.0em;margin:16px 0 4px 0'>IQ Control</p>", unsafe_allow_html=True)
     _tiq_data = []
     for _s, _l in SCENARIOS:
