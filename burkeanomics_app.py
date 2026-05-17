@@ -30,7 +30,7 @@ _components.html("""<script>
 st.title("🧠 Burkeanomics Simulator")
 _ver_col, _ref_col = st.columns([2, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.25</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.26</p>", unsafe_allow_html=True)
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -733,6 +733,30 @@ with st.expander("BrainPower", expanded=not _is_mobile):
 st.markdown('<div id="brains"></div>', unsafe_allow_html=True)
 with st.expander("Brains", expanded=False):
     st.plotly_chart(fig_iq, use_container_width=True)
+    # Per-class en masse Total IQ charts
+    _niq_defs = [("GovNukes", "#FFD700", "#333333"), ("Providers", "#228B22", "white"), ("SinSayers", "#8B0000", "white")]
+    _niq_data = {cls: [] for cls, _, _ in _niq_defs}
+    _niq_xlbls = ["Left\ncCon", "Center", "Right\ndCon"]
+    for _s, _ in SCENARIOS:
+        _dfem_n = calculate_en_masse(_s).set_index("Class")
+        for cls, _, _ in _niq_defs:
+            _niq_data[cls].append(float(_dfem_n.loc[cls, "Total IQ"]))
+    _niq_ymax = max(v for cls, _, _ in _niq_defs for v in _niq_data[cls]) * 1.1
+    _niq_cols = st.columns(3)
+    for _ni, ((cls, _bc, _tc), _cw) in enumerate(zip(_niq_defs, _niq_cols)):
+        _fig_niq = go.Figure()
+        _fig_niq.add_trace(go.Bar(x=_niq_xlbls, y=_niq_data[cls], marker_color=_bc,
+            text=[f"{v:,.0f}" for v in _niq_data[cls]],
+            textposition="inside", textfont=dict(color=_tc, size=10), showlegend=False))
+        _fig_niq.update_layout(
+            title=dict(text=f"{cls}' Total IQ", x=0.5, xanchor="center", font=dict(size=14)),
+            height=280, showlegend=False,
+            margin=dict(t=55, b=40, l=60 if _ni == 0 else 10, r=10),
+            yaxis=dict(range=[0, _niq_ymax], showticklabels=_ni == 0,
+                       title="Total IQ" if _ni == 0 else "", tickformat=","),
+            plot_bgcolor="white")
+        with _cw:
+            st.plotly_chart(_fig_niq, use_container_width=True)
 
 st.markdown('<div id="power"></div>', unsafe_allow_html=True)
 with st.expander("Power", expanded=False):
