@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import json
 import math
+import io
 
 # Apply any pending JSON import before widgets are instantiated
 if "_import_pending" in st.session_state:
@@ -85,9 +86,13 @@ _components.html("""<script>
 </script>""", height=0)
 
 st.title("🧠 Burkeanomics Simulator")
-_ver_col, _ref_col = st.columns([2, 3])
+# layout: version | PDF export | references
+_ver_col, _pdf_col, _ref_col = st.columns([2, 1, 3])
 with _ver_col:
-    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.33</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.35</p>", unsafe_allow_html=True)
+with _pdf_col:
+    with st.expander("PDF Export", expanded=False):
+        st.button("Generate PDF", key="generate_pdf_btn", on_click=lambda: st.session_state.update({"_generate_pdf_pending": True}))
 with _ref_col:
     with st.expander("References"):
         st.markdown(
@@ -123,7 +128,7 @@ with st.sidebar.expander("**🌐 Constants**", expanded=False):
     st.markdown(f"<p style='text-align:center;font-size:0.85em;color:#888;margin-top:-8px'>${energy:,.0f}</p>", unsafe_allow_html=True)
     base_iq = st.number_input("Base IQ", value=100, step=1, key="base_iq")
 
-with st.sidebar.expander("**🧬 Per Capita Nucleon Attributes**", expanded=False):
+with st.sidebar.expander("**🧬 Per Capita Attributes**", expanded=False):
     # ── Brains per Class ──────────────────────────────────────────────────────
     st.markdown("<p style='text-align:center;font-weight:600;margin:4px 0'>Brains per Class</p>", unsafe_allow_html=True)
     st.caption("L & R: factors × Center values")
@@ -464,13 +469,13 @@ with st.expander("Electron Throttles", expanded=not _is_mobile):
     st.markdown("<style>div.stSlider > label { display:block; text-align:center; width:100%; }</style>", unsafe_allow_html=True)
     _et_l, _et_c, _et_r = st.columns(3)
     with _et_l:
-        st.slider("Left · cCon", 0, 99, 75, 1, format="%d%%", key="th_ccon",
+        st.slider("Left · cCon", 0, 99, 75, 1, format="%d%% cCon", key="th_ccon",
                   on_change=lambda: _scale_mechs("c"))
     with _et_c:
-        st.slider("Center", 0, 99, 50, 1, format="%d%%", key="th_center",
+        st.slider("Center", 0, 99, 50, 1, format="%d%% cCon", key="th_center",
                   on_change=lambda: _scale_mechs("center"))
     with _et_r:
-        st.slider("Right · dCon", 0, 99, 25, 1, format="%d%%", key="th_dcon",
+        st.slider("Right · dCon", 0, 99, 25, 1, format="%d%% cCon", key="th_dcon",
                   on_change=lambda: _scale_mechs("d"))
     with st.expander("Mechanisms", expanded=False):
         st.markdown("<style>section[data-testid='stMain'] div[data-testid='stNumberInput'] input{text-align:center}</style>", unsafe_allow_html=True)
@@ -485,11 +490,11 @@ with st.expander("Electron Throttles", expanded=not _is_mobile):
             _mc[1].number_input("wt", min_value=0, max_value=5, value=_MECH_DEF[_m][3],
                                 step=1, key=f"mech_weight_{_m}", on_change=_sync_all_th,
                                 label_visibility="collapsed")
-            _mc[2].slider(_dir_lbl, 0, 99, _MECH_DEF[_m][0], format="%d%%",
+            _mc[2].slider(_dir_lbl, 0, 99, _MECH_DEF[_m][0], format="%d%% cCon",
                           key=f"mech_{_m}_c", on_change=lambda: _sync_th("c"))
-            _mc[3].slider(_dir_lbl, 0, 99, _MECH_DEF[_m][1], format="%d%%",
+            _mc[3].slider(_dir_lbl, 0, 99, _MECH_DEF[_m][1], format="%d%% cCon",
                           key=f"mech_{_m}_center", on_change=lambda: _sync_th("center"))
-            _mc[4].slider(_dir_lbl, 0, 99, _MECH_DEF[_m][2], format="%d%%",
+            _mc[4].slider(_dir_lbl, 0, 99, _MECH_DEF[_m][2], format="%d%% cCon",
                           key=f"mech_{_m}_d", on_change=lambda: _sync_th("d"))
     st.markdown("<p style='text-align:center;font-weight:600;font-size:1.0em;margin:16px 0 4px 0'>IQ Control</p>", unsafe_allow_html=True)
     _tiq_data = []
@@ -570,7 +575,9 @@ fig_main = px.bar(compare_df, x="Scenario", y="Total tBP (Trillions Smart $)",
 fig_main.update_traces(texttemplate="")   # labels via annotations for dark-mode safety
 fig_main.update_layout(height=520, bargap=0.25, showlegend=False,
                        title=dict(text="Gross Total<br>BrainPower", x=0.5, xanchor="center", font=dict(size=16)),
-                       xaxis=_xaxis_cfg, yaxis=dict(range=[_y_min, _y_max]),
+                       xaxis=_xaxis_cfg,
+                       yaxis=dict(range=[_y_min, _y_max], tickprefix="S$", ticksuffix="T",
+                                  tickformat=".0f", title=""),
                        margin=dict(b=160, t=140))
 
 # Bar value labels — no box, theme-aware color
@@ -630,7 +637,9 @@ for trace in fig_stacked.data:
 fig_stacked.update_layout(height=520, barmode="stack", showlegend=False,
                           title=dict(text="Class Based<br>BrainPower", x=0.5, xanchor="center", font=dict(size=16)),
                           uniformtext=dict(minsize=8, mode="hide"),
-                          xaxis=_xaxis_cfg, yaxis=dict(range=[0, _y_max_stack]),
+                          xaxis=_xaxis_cfg,
+                          yaxis=dict(range=[0, _y_max_stack], tickprefix="S$", ticksuffix="T",
+                                     tickformat=".0f", title=""),
                           margin=dict(b=160, t=140))
 for _, (scen, label) in enumerate(SCENARIOS):
     _, total = calculate_breakdown(scen)
@@ -688,7 +697,7 @@ fig_en.update_layout(
     uniformtext=dict(minsize=8, mode="hide"),
     xaxis=dict(categoryorder="array", categoryarray=_x3_order,
                ticktext=["Electrons", "Nucleons"] * 3, tickvals=_x3_order),
-    yaxis=dict(title="tBP (Trillions Smart $)", rangemode="tozero"),
+    yaxis=dict(title="", rangemode="tozero", tickprefix="S$", ticksuffix="T", tickformat=".0f"),
     margin=dict(b=80, t=130))
 fig_en.add_annotation(**_FOOTER_ANNOTATION)
 
@@ -766,9 +775,14 @@ fig_iq.update_layout(
     barmode="group", height=540, showlegend=False,
     uniformtext=dict(minsize=8, mode="hide"),
     title=dict(text="Total Applicable IQ", x=0.5, xanchor="center", font=dict(size=16)),
-    yaxis=dict(type="log"),
+    yaxis=dict(type="log", title=""),
     xaxis=dict(tickvals=_labs3, ticktext=_labs3),
     margin=dict(b=100, t=150))
+fig_iq.add_annotation(
+    xref="paper", yref="paper", x=0, y=1,
+    text="IQ<br>Points", showarrow=False,
+    xanchor="center", yanchor="bottom", xshift=-42,
+    align="center", font=dict(size=12))
 fig_iq.add_annotation(**_FOOTER_ANNOTATION)
 
 # ---- Chart: Power Per Capita (log scale, new) ----
@@ -839,7 +853,9 @@ for sep in [3.5, 7.5]:
 fig_pw.update_layout(
     barmode="group", height=540, showlegend=False,
     uniformtext=dict(minsize=7, mode="hide"),
-    yaxis=dict(type="log", title="Power ($)"),
+    yaxis=dict(type="log", title="",
+               tickvals=[1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9],
+               ticktext=["$1K", "$10K", "$100K", "$1M", "$10M", "$100M", "$1B"]),
     xaxis=dict(categoryorder="array", categoryarray=_pw_x_cats,
                showticklabels=False),
     title=dict(text="Power per Capita", x=0.5, xanchor="center", font=dict(size=16)),
@@ -876,8 +892,14 @@ with st.expander("Brains", expanded=False):
             height=280, showlegend=False,
             margin=dict(t=55, b=40, l=60 if _ni == 0 else 10, r=10),
             yaxis=dict(range=[0, _niq_ymax], showticklabels=_ni == 0,
-                       title="Total IQ" if _ni == 0 else "", tickformat=","),
+                       title="", tickformat=","),
             plot_bgcolor="white")
+        if _ni == 0:
+            _fig_niq.add_annotation(
+                xref="paper", yref="paper", x=0, y=1,
+                text="IQ<br>Points", showarrow=False,
+                xanchor="center", yanchor="bottom", xshift=-32,
+                align="center", font=dict(size=10))
         with _cw:
             st.plotly_chart(_fig_niq, use_container_width=True)
 
@@ -988,3 +1010,80 @@ with st.expander("BrainPower by Class", expanded=False):
 
 footer = "© 2026 David Burkean • Sharing is caring • All Rights Reserved"
 st.markdown(f"<div style='text-align: center; color: #666; padding: 20px 0; font-size: 0.9em; border-top: 1px solid #ddd;'>{footer}</div>", unsafe_allow_html=True)
+
+# ---------------- PDF EXPORT (Playwright) ----------------
+def _figs_to_html_fragments(figs):
+    fragments = []
+    for name, fig in figs:
+        try:
+            frag = fig.to_html(full_html=False, include_plotlyjs='cdn')
+        except Exception:
+            frag = f"<div><h3>{name}</h3><p>(chart unavailable)</p></div>"
+        fragments.append((name, frag))
+    return fragments
+
+def _build_report_html(title, fragments, metadata=None):
+    meta_html = ""
+    if metadata:
+        meta_html = "<div style='margin-bottom:12px; font-size:0.95em; color:#444;'>" + " | ".join(metadata) + "</div>"
+    body = [
+        "<html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>",
+        "<style>@media print{@page{size:A4;margin:20mm}} body{font-family:Helvetica,Arial,sans-serif;color:#222;padding:18px} .report-title{font-size:22px;font-weight:700;margin-bottom:6px}.report-section{page-break-inside:avoid;margin-bottom:18px}</style>",
+        "</head><body>",
+        f"<div class='report-title'>{title}</div>",
+        meta_html,
+    ]
+    for name, frag in fragments:
+        body.append(f"<div class='report-section'><h2 style='font-size:16px;color:#333;margin-bottom:6px'>{name}</h2>")
+        body.append(frag)
+        body.append("</div>")
+    body.append(f"<div style='font-size:10px;color:#666;margin-top:18px'>Generated by Burkeanomics Simulator — {footer}</div>")
+    body.append("</body></html>")
+    return "\n".join(body)
+
+def _render_pdf_with_playwright(html_bytes_or_str):
+    try:
+        from playwright.sync_api import sync_playwright
+    except Exception:
+        raise RuntimeError("Playwright is not installed. Install with `pip install playwright` and run `playwright install chromium`.")
+    html = html_bytes_or_str if isinstance(html_bytes_or_str, str) else html_bytes_or_str.decode('utf-8')
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.set_content(html, wait_until='networkidle')
+        pdf_bytes = page.pdf(format='A4', print_background=True)
+        browser.close()
+    return pdf_bytes
+
+if st.session_state.get("_generate_pdf_pending", False):
+    # clear pending flag and run generation after figures exist
+    st.session_state["_generate_pdf_pending"] = False
+    with st.spinner("Rendering PDF — launching Playwright..."):
+        try:
+            figs = [
+                ("Gross Total BrainPower", fig_main),
+                ("Class Breakdown (Stacked)", fig_stacked),
+                ("Electrons v Nucleons", fig_en),
+                ("Total Applicable IQ", fig_iq),
+                ("Power per Capita", fig_pw),
+            ]
+            frags = _figs_to_html_fragments(figs)
+            metadata = [st.session_state.get('universe_name',''), f"Households: {st.session_state.get('households',0):,}"]
+            report_html = _build_report_html(f"Burkeanomics Report — {st.session_state.get('universe_name','Universe')}", frags, metadata)
+            pdf_bytes = _render_pdf_with_playwright(report_html)
+            bname = (st.session_state.get('universe_name','universe') or 'universe').replace(' ','_') + '.pdf'
+            st.success("PDF ready")
+            st.download_button("⬇ Download PDF", data=pdf_bytes, file_name=bname, mime='application/pdf')
+        except Exception as e:
+            err = str(e)
+            # Fallback: if Playwright isn't installed, offer the HTML report for download
+            if 'playwright' in err.lower() or 'playwright is not installed' in err.lower():
+                st.warning("Playwright not available — providing HTML report as fallback.")
+                try:
+                    bname_html = (st.session_state.get('universe_name','universe') or 'universe').replace(' ','_') + '.html'
+                    st.download_button("⬇ Download Report (HTML)", data=report_html, file_name=bname_html, mime='text/html')
+                    st.info("To enable direct PDF export, install Playwright: `pip install playwright` and run `playwright install chromium`.")
+                except Exception as e2:
+                    st.error(f"Failed to prepare fallback HTML: {e2}")
+            else:
+                st.error(f"PDF generation failed: {e}")
