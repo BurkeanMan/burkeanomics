@@ -101,7 +101,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.35</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.36</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -113,16 +113,19 @@ with _gen_col:
         st.session_state["_generate_pdf_pending"] = True
 with _dl_col:
     if st.session_state.get("_pdf_ready", False) and st.session_state.get("_pdf_bytes") is not None:
+        _dl_mime = st.session_state.get("_pdf_mime", "application/pdf")
+        _dl_label = "Download PDF" if _dl_mime == "application/pdf" else "Download Report (HTML)"
         st.download_button(
-            "Download PDF",
+            _dl_label,
             data=st.session_state["_pdf_bytes"],
             file_name=st.session_state.get("_pdf_filename", "universe.pdf"),
-            mime="application/pdf",
+            mime=_dl_mime,
             key="download_pdf_top",
             on_click=lambda: st.session_state.update({
                 "_pdf_ready": False,
                 "_pdf_bytes": None,
                 "_pdf_filename": None,
+                "_pdf_mime": None,
             }),
         )
 with _ref_col:
@@ -1672,23 +1675,13 @@ if st.session_state.get("_generate_pdf_pending", False):
                 "playwright" in err.lower()
                 or "playwright is not installed" in err.lower()
             ):
-                st.warning(
-                    "Playwright not available — providing HTML report as fallback."
-                )
-                try:
-                    bname_html = (
-                        st.session_state.get("universe_name", "universe") or "universe"
-                    ).replace(" ", "_") + ".html"
-                    st.download_button(
-                        "⬇ Download Report (HTML)",
-                        data=report_html,
-                        file_name=bname_html,
-                        mime="text/html",
-                    )
-                    st.info(
-                        "To enable direct PDF export, install Playwright: `pip install playwright` and run `playwright install chromium`."
-                    )
-                except Exception as e2:
-                    st.error(f"Failed to prepare fallback HTML: {e2}")
+                bname_html = normalize_pdf_filename(
+                    st.session_state.get("universe_name", "universe") or "universe"
+                ).replace(".pdf", ".html")
+                st.session_state["_pdf_ready"] = True
+                st.session_state["_pdf_bytes"] = report_html.encode("utf-8")
+                st.session_state["_pdf_filename"] = bname_html
+                st.session_state["_pdf_mime"] = "text/html"
+                st.rerun()
             else:
                 st.error(f"PDF generation failed: {e}")
