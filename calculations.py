@@ -19,12 +19,16 @@ def calculate_per_capita(scen: str):
     energy = st.session_state.get("energy", 6378)
     rows = []
 
-    # Electrons — power always equals Per Capita Electron Power
-    rows.append({"Class": "Electrons (unthrottled)", "IQ": base, "Power ($)": energy})
+    # Electrons — PC IQ = adults per household × adult base IQ
+    adults_key = f"adults_e_{suffix}"
+    adults_default = {"c": 1.3, "center": 1.5, "d": 1.8}[suffix]
+    adults = st.session_state.get(adults_key, adults_default)
+    e_iq = round(adults * base)
+    rows.append({"Class": "Electrons (unthrottled)", "IQ": e_iq, "Power ($)": energy})
     rows.append(
         {
             "Class": "Electrons (throttled)",
-            "IQ": round(base * (1 - th)),
+            "IQ": round(e_iq * (1 - th)),
             "Power ($)": energy,
         }
     )
