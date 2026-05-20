@@ -101,7 +101,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.38</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.39</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -745,6 +745,12 @@ with st.expander("Electron Throttles", expanded=not _is_mobile):
             xaxis=dict(showticklabels=True),
             plot_bgcolor="white",
         )
+        if _ci == 0:
+            _fig_t.add_annotation(
+                xref="paper", yref="paper", x=0, y=1,
+                text="IQ<br>Points", showarrow=False,
+                xanchor="center", yanchor="bottom", xshift=-26,
+                align="center", font=dict(size=10))
         with _col_w:
             st.plotly_chart(_fig_t, use_container_width=True)
 
