@@ -101,7 +101,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.40</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.41</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -963,7 +963,7 @@ fig_stacked.update_layout(
     uniformtext=dict(minsize=8, mode="hide"),
     xaxis=_xaxis_cfg,
     yaxis=dict(
-        range=[0, _y_max_stack],
+        range=[0.1, _y_max_stack],
         tickprefix="S$",
         ticksuffix="T",
         tickformat=".0f",
@@ -1107,7 +1107,8 @@ fig_en.update_layout(
         tickvals=_x3_order,
     ),
     yaxis=dict(
-        title="", rangemode="tozero", tickprefix="S$", ticksuffix="T", tickformat=".0f"
+        title="", range=[0.1, max(max(_bp_nv), max(_bp_ev)) * 1.12],
+        tickprefix="S$", ticksuffix="T", tickformat=".0f"
     ),
     margin=dict(b=80, t=130),
 )
@@ -1466,7 +1467,7 @@ with st.expander("Brains", expanded=False):
             showlegend=False,
             margin=dict(t=55, b=40, l=60 if _ni == 0 else 10, r=10),
             yaxis=dict(
-                range=[0, _niq_ymax], showticklabels=_ni == 0, title="", tickformat=","
+                range=[1, _niq_ymax], showticklabels=_ni == 0, title="", tickformat=","
             ),
             plot_bgcolor="white",
         )
@@ -1502,9 +1503,10 @@ with st.expander("Power", expanded=False):
         for cls, _, _ in _npc_defs:
             _npc_data[cls].append(float(_dfpc_n.loc[cls, "Power ($)"]))
     _ps_ymax = max(max(_npc_data["Providers"]), max(_npc_data["SinSayers"])) * 1.1
+    _g_ymax = max(_npc_data["GovNukes"]) * 1.1
     _npc_cols = st.columns(3)
     for (cls, _bc, _tc), _cw in zip(_npc_defs, _npc_cols):
-        _yrange = [0, _ps_ymax] if cls in ("Providers", "SinSayers") else None
+        _yrange = [1, _g_ymax] if cls == "GovNukes" else [1, _ps_ymax]
         _fig_npc = go.Figure()
         _fig_npc.add_trace(
             go.Bar(
@@ -1530,7 +1532,7 @@ with st.expander("Power", expanded=False):
             yaxis=dict(
                 tickprefix="$",
                 tickformat=",.0f",
-                **({} if _yrange is None else {"range": _yrange}),
+                range=_yrange,
             ),
             plot_bgcolor="white",
         )
@@ -1558,7 +1560,7 @@ with st.expander("Populations", expanded=False):
         height=240,
         showlegend=False,
         margin=dict(t=55, b=40, l=70, r=10),
-        yaxis=dict(tickformat=","),
+        yaxis=dict(tickformat=",", range=[1, _hh * 1.15]),
         plot_bgcolor="white",
     )
     _, _ep_m, _ = st.columns([1, 2, 1])
@@ -1603,6 +1605,7 @@ with st.expander("Populations", expanded=False):
             height=240,
             showlegend=False,
             margin=dict(t=55, b=40, l=50, r=10),
+            yaxis=dict(range=[1, max(vals) * 1.15]),
             plot_bgcolor="white",
         )
         with _cw:
