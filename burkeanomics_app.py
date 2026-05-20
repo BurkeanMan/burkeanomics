@@ -101,7 +101,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.41</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.42</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -133,7 +133,8 @@ with _ref_col:
         st.markdown(
             "• [Bcon 300 — Burkean Economics](https://www.bnation.us/econ-300-burkean-economics)  \n"
             "• [Bcon 301 — Particle Physics Model of Socionomic Systems](https://www.bnation.us/econ-301)  \n"
-            "• [Bcon 302 — BrainPower Charts](https://www.bnation.us/302-bp-charts)"
+            "• [Bcon 302 — BrainPower Charts](https://www.bnation.us/302-bp-charts)  \n"
+            "• [Bcon 304 — Human Dualities](https://www.bnation.us/304-human-dualities)"
         )
 
 # ====================== DEFAULTS ======================
