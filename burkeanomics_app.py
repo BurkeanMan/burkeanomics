@@ -101,7 +101,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.37</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.38</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -210,19 +210,19 @@ with st.sidebar.expander("**🧬 Per Capita Attributes**", expanded=False):
     _ecols = st.columns(3)
     with _ecols[0]:
         _adults_c = st.number_input(
-            "Adults/HH", min_value=1.0, max_value=2.0, value=1.3, step=0.1,
+            "Adults/Electron", min_value=1.0, max_value=2.0, value=1.3, step=0.1,
             format="%.1f", key="adults_e_c"
         )
         st.caption(f"PC IQ: {round(_adults_c * _base_iq0):,}")
     with _ecols[1]:
         _adults_center = st.number_input(
-            "Adults/HH", min_value=1.0, max_value=2.0, value=1.5, step=0.1,
+            "Adults/Electron", min_value=1.0, max_value=2.0, value=1.5, step=0.1,
             format="%.1f", key="adults_e_center"
         )
         st.caption(f"PC IQ: {round(_adults_center * _base_iq0):,}")
     with _ecols[2]:
         _adults_d = st.number_input(
-            "Adults/HH", min_value=1.0, max_value=2.0, value=1.8, step=0.1,
+            "Adults/Electron", min_value=1.0, max_value=2.0, value=1.8, step=0.1,
             format="%.1f", key="adults_e_d"
         )
         st.caption(f"PC IQ: {round(_adults_d * _base_iq0):,}")
