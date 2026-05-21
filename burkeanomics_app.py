@@ -27,11 +27,7 @@ if "_import_pending" in st.session_state:
         st.session_state[_k] = _v
 
 # ── Cookie-backed auth persistence ────────────────────────────────────────────
-@st.cache_resource
-def _get_cookie_manager():
-    return stx.CookieManager(key="bsim_cm")
-
-_cm = _get_cookie_manager()
+_cm = stx.CookieManager(key="bsim_cm")
 
 if "sb_user" not in st.session_state:
     _c_tok = _cm.get("sb_access_token")
@@ -132,7 +128,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.47</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.48</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
