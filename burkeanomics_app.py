@@ -106,7 +106,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.45</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.46</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -149,7 +149,8 @@ if "universe_name" not in st.session_state:
 _EXPORT_PREFIXES = (
     "th_", "iq_", "b_", "p_", "pop_", "adults_",
     "households", "energy", "base_iq", "top_execs_", "ai_iq_",
-    "rpf_", "te_factor_", "ai_factor_", "universe_name", "dark_mode",
+    "rpf_", "te_factor_", "ai_factor_", "universe_name", "universe_desc",
+    "note_", "url_", "dark_mode",
 )
 
 # ====================== ACCOUNT SIDEBAR ======================
@@ -235,6 +236,9 @@ if st.sidebar.button("🔄 Reset"):
         "te_factor_",
         "ai_factor_",
         "universe_name",
+        "universe_desc",
+        "note_",
+        "url_",
         "dark_mode",
         "_uploader_key",
     )
@@ -256,6 +260,8 @@ with st.sidebar.expander("**🌐 Constants**", expanded=False):
     households = st.number_input(
         "Electrons", value=13970000, step=10000, key="households"
     )
+    st.text_input("↳ Note", placeholder="e.g. CA households, c2025", key="note_households", label_visibility="collapsed")
+    st.text_input("↳ Source URL", placeholder="https://...", key="url_households", label_visibility="collapsed")
     energy = st.number_input(
         "Electron Power per Capita", value=6378, step=10, key="energy"
     )
@@ -263,7 +269,11 @@ with st.sidebar.expander("**🌐 Constants**", expanded=False):
         f"<p style='text-align:center;font-size:0.85em;color:#888;margin-top:-8px'>${energy:,.0f}</p>",
         unsafe_allow_html=True,
     )
+    st.text_input("↳ Note", placeholder="e.g. Median CA household energy spend", key="note_energy", label_visibility="collapsed")
+    st.text_input("↳ Source URL", placeholder="https://...", key="url_energy", label_visibility="collapsed")
     base_iq = st.number_input("Base IQ", value=100, step=1, key="base_iq")
+    st.text_input("↳ Note", placeholder="e.g. Population mean IQ", key="note_base_iq", label_visibility="collapsed")
+    st.text_input("↳ Source URL", placeholder="https://...", key="url_base_iq", label_visibility="collapsed")
 
 with st.sidebar.expander("**🧬 Per Capita Attributes**", expanded=False):
     # ── Brains per Class ──────────────────────────────────────────────────────
@@ -497,6 +507,10 @@ with st.sidebar.expander("**👥 Nucleons per Electron**", expanded=False):
 with st.sidebar.expander("**🏷️ Metadata**", expanded=False):
     st.text_input(
         "Universe Name", placeholder="e.g. Cal Energy Economy", key="universe_name"
+    )
+    st.text_area(
+        "Description", placeholder="Describe this universe's scenario and assumptions...",
+        key="universe_desc", height=100
     )
 
     st.markdown("---")
