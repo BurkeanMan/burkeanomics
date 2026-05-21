@@ -12,6 +12,11 @@ from export import (
     normalize_pdf_filename,
     render_pdf_with_playwright,
 )
+from supabase_client import (
+    is_logged_in, current_user,
+    sign_in, sign_up, sign_out,
+    list_universes, save_universe, load_universe, delete_universe,
+)
 
 # Apply any pending JSON import before widgets are instantiated
 if "_import_pending" in st.session_state:
@@ -101,7 +106,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.42</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.43</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -140,6 +145,71 @@ with _ref_col:
 # ====================== DEFAULTS ======================
 if "universe_name" not in st.session_state:
     st.session_state["universe_name"] = "Cal Energy Economy"
+
+_EXPORT_PREFIXES = (
+    "th_", "iq_", "b_", "p_", "pop_", "adults_",
+    "households", "energy", "base_iq", "top_execs_", "ai_iq_",
+    "rpf_", "te_factor_", "ai_factor_", "universe_name", "dark_mode",
+)
+
+# ====================== ACCOUNT SIDEBAR ======================
+with st.sidebar.expander("🔐 Account", expanded=not is_logged_in()):
+    if is_logged_in():
+        st.caption(f"Signed in as **{current_user()['email']}**")
+        if st.button("Sign Out", key="sb_signout"):
+            sign_out()
+            st.rerun()
+    else:
+        _auth_mode = st.radio("", ["Sign In", "Sign Up"], horizontal=True, key="sb_auth_mode", label_visibility="collapsed")
+        _sb_email = st.text_input("Email", key="sb_email")
+        _sb_pw = st.text_input("Password", type="password", key="sb_pw")
+        if _auth_mode == "Sign In":
+            if st.button("Sign In", key="sb_signin_btn"):
+                try:
+                    sign_in(_sb_email, _sb_pw)
+                    st.rerun()
+                except Exception as _e:
+                    st.error(f"Sign in failed: {_e}")
+        else:
+            if st.button("Sign Up", key="sb_signup_btn"):
+                try:
+                    sign_up(_sb_email, _sb_pw)
+                    st.success("Account created! Check your email to confirm.")
+                except Exception as _e:
+                    st.error(f"Sign up failed: {_e}")
+
+# ====================== MY UNIVERSES SIDEBAR ======================
+if is_logged_in():
+    with st.sidebar.expander("💾 My Universes", expanded=False):
+        _universes = list_universes()
+        if _universes:
+            _uni_map = {u["name"]: u["id"] for u in _universes}
+            _sel_uni = st.selectbox("Saved universes", list(_uni_map.keys()), key="sb_uni_select")
+            _lc, _dc = st.columns(2)
+            with _lc:
+                if st.button("Load", key="sb_uni_load", use_container_width=True):
+                    _loaded = load_universe(_uni_map[_sel_uni])
+                    if _loaded:
+                        st.session_state["_import_pending"] = _loaded["params"]
+                        st.rerun()
+            with _dc:
+                if st.button("Delete", key="sb_uni_delete", use_container_width=True):
+                    delete_universe(_uni_map[_sel_uni])
+                    st.rerun()
+            st.markdown("---")
+        _save_name = st.text_input(
+            "Save current universe as",
+            value=st.session_state.get("universe_name", ""),
+            key="sb_uni_save_name",
+        )
+        if st.button("💾 Save", key="sb_uni_save", use_container_width=True):
+            if _save_name.strip():
+                _params = {k: v for k, v in st.session_state.items()
+                           if k.startswith(_EXPORT_PREFIXES)}
+                save_universe(_save_name.strip(), _params)
+                st.success(f"Saved '{_save_name.strip()}'")
+            else:
+                st.error("Enter a name first.")
 
 # ====================== RESET ======================
 st.sidebar.header("⚙️ Parameters")
@@ -419,25 +489,6 @@ with st.sidebar.expander("**👥 Nucleons per Electron**", expanded=False):
         st.number_input("GovNukes", value=8, step=1, key="pop_g_d")
         st.number_input("Providers", value=55, step=1, key="pop_p_d")
         st.number_input("SinSayers", value=15, step=1, key="pop_s_d")
-
-_EXPORT_PREFIXES = (
-    "th_",
-    "iq_",
-    "b_",
-    "p_",
-    "pop_",
-    "adults_",
-    "households",
-    "energy",
-    "base_iq",
-    "top_execs_",
-    "ai_iq_",
-    "rpf_",
-    "te_factor_",
-    "ai_factor_",
-    "universe_name",
-    "dark_mode",
-)
 
 with st.sidebar.expander("**🏷️ Metadata**", expanded=False):
     st.text_input(
