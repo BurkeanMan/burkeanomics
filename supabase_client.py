@@ -115,3 +115,15 @@ def load_universe(universe_id: str) -> dict | None:
 
 def delete_universe(universe_id: str):
     get_supabase().table("universes").delete().eq("id", universe_id).execute()
+
+
+def send_password_reset(email: str):
+    """Send a password-reset email. Supabase redirects to the configured Site URL."""
+    get_supabase().auth.reset_password_for_email(email)
+
+
+def update_password(access_token: str, refresh_token: str, new_password: str):
+    """Set a new password using the recovery tokens from the reset link."""
+    client = get_supabase()
+    client.auth.set_session(access_token, refresh_token)
+    client.auth.update_user({"password": new_password})

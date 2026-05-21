@@ -17,6 +17,7 @@ from export import (
 from supabase_client import (
     is_logged_in, current_user,
     sign_in, sign_up, sign_out,
+    send_password_reset, update_password,
     list_universes, save_universe, load_universe, delete_universe,
 )
 
@@ -45,6 +46,9 @@ if "sb_user" not in st.session_state:
             st.session_state.pop("sb_refresh_token", None)
             _cm.delete("sb_access_token")
             _cm.delete("sb_refresh_token")
+
+_recovery_token   = st.query_params.get("sb_recovery", "")
+_recovery_refresh = st.query_params.get("sb_refresh", "")
 
 st.set_page_config(
     page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="expanded"
@@ -118,17 +122,55 @@ _components.html(
     window.parent.addEventListener('hashchange', function() {
         setTimeout(function() { openExpander(window.parent.location.hash); }, 80);
     });
+
+    // Password-reset recovery: Supabase puts tokens in the hash fragment.
+    // Convert to query params so Streamlit can read them, then strip the hash.
+    (function() {
+        var h = window.parent.location.hash;
+        if (h && h.indexOf('type=recovery') !== -1) {
+            var p = new URLSearchParams(h.slice(1));
+            var at = p.get('access_token'), rt = p.get('refresh_token') || '';
+            if (at) {
+                var u = new URL(window.parent.location.href);
+                u.hash = '';
+                u.searchParams.set('sb_recovery', at);
+                u.searchParams.set('sb_refresh', rt);
+                window.parent.location.replace(u.toString());
+            }
+        }
+    })();
 })();
 </script>""",
     height=0,
 )
+
+# ── Password recovery form (shown when user arrives via reset-email link) ──────
+if _recovery_token:
+    st.title("🔐 Set New Password")
+    _np1 = st.text_input("New password", type="password", key="pw_new1")
+    _np2 = st.text_input("Confirm new password", type="password", key="pw_new2")
+    if st.button("Update password", key="pw_update_btn"):
+        if not _np1:
+            st.error("Enter a new password.")
+        elif _np1 != _np2:
+            st.error("Passwords don't match.")
+        elif len(_np1) < 6:
+            st.error("Password must be at least 6 characters.")
+        else:
+            try:
+                update_password(_recovery_token, _recovery_refresh, _np1)
+                st.query_params.clear()
+                st.success("Password updated! You can now sign in.")
+            except Exception as _e:
+                st.error(f"Update failed: {_e}")
+    st.stop()
 
 st.title("🧠 Burkeanomics Simulator")
 # layout: version | generate | download | references
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.48</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.49</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -198,6 +240,17 @@ with st.sidebar.expander("🔐 Account", expanded=not is_logged_in()):
                     st.rerun()
                 except Exception as _e:
                     st.error(f"Sign in failed: {_e}")
+            with st.expander("Forgot password?"):
+                _reset_email = st.text_input("Email", key="sb_reset_email")
+                if st.button("Send reset email", key="sb_reset_btn"):
+                    if _reset_email:
+                        try:
+                            send_password_reset(_reset_email)
+                            st.success("Check your email for a reset link.")
+                        except Exception as _e:
+                            st.error(f"Failed: {_e}")
+                    else:
+                        st.error("Enter your email.")
         else:
             if st.button("Sign Up", key="sb_signup_btn"):
                 try:
