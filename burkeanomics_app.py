@@ -106,7 +106,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.44</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.45</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -190,7 +190,9 @@ if is_logged_in():
                 if st.button("Load", key="sb_uni_load", use_container_width=True):
                     _loaded = load_universe(_uni_map[_sel_uni])
                     if _loaded:
-                        st.session_state["_import_pending"] = _loaded["params"]
+                        _pending = dict(_loaded["params"])
+                        _pending["universe_name"] = _loaded["name"]
+                        st.session_state["_import_pending"] = _pending
                         st.rerun()
             with _dc:
                 if st.button("Delete", key="sb_uni_delete", use_container_width=True):
