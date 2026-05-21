@@ -170,7 +170,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.49</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.50</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -707,7 +707,7 @@ def _scale_mechs(sfx):
 SCENARIOS = [("cCon (Left)", "Left"), ("Center", "Center"), ("dCon (Right)", "Right")]
 
 # ====================== CHARTS ======================
-_FOOTER = "© 2026 David Burkean • Sharing is caring • All Rights Reserved"
+_FOOTER = "© 2026 David Burkean • Sharing is caring • Commercial use by permission • All Rights Reserved"
 _FOOTER_ANNOTATION = dict(
     text=_FOOTER,
     xref="paper",
@@ -1824,7 +1824,7 @@ with st.expander("BrainPower by Class", expanded=False):
                 hide_index=True,
             )
 
-footer = "© 2026 David Burkean • Sharing is caring • All Rights Reserved"
+footer = "© 2026 David Burkean • Sharing is caring • Commercial use by permission • All Rights Reserved"
 st.markdown(
     f"<div style='text-align: center; color: #666; padding: 20px 0; font-size: 0.9em; border-top: 1px solid #ddd;'>{footer}</div>",
     unsafe_allow_html=True,
