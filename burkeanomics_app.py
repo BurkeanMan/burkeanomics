@@ -5,6 +5,8 @@ import plotly.graph_objects as go
 import pandas as pd
 import json
 import math
+from datetime import datetime, timedelta
+import extra_streamlit_components as stx
 from calculations import calculate_per_capita, calculate_en_masse, calculate_breakdown
 from export import (
     build_report_html,
@@ -23,6 +25,30 @@ if "_import_pending" in st.session_state:
     _pending = st.session_state.pop("_import_pending")
     for _k, _v in _pending.items():
         st.session_state[_k] = _v
+
+# ── Cookie-backed auth persistence ────────────────────────────────────────────
+@st.cache_resource
+def _get_cookie_manager():
+    return stx.CookieManager(key="bsim_cm")
+
+_cm = _get_cookie_manager()
+
+if "sb_user" not in st.session_state:
+    _c_tok = _cm.get("sb_access_token")
+    _c_ref = _cm.get("sb_refresh_token")
+    if _c_tok and _c_ref:
+        st.session_state["sb_access_token"] = _c_tok
+        st.session_state["sb_refresh_token"] = _c_ref
+        try:
+            from supabase_client import get_supabase
+            _r = get_supabase().auth.get_user()
+            if _r and _r.user:
+                st.session_state["sb_user"] = {"id": _r.user.id, "email": _r.user.email}
+        except Exception:
+            st.session_state.pop("sb_access_token", None)
+            st.session_state.pop("sb_refresh_token", None)
+            _cm.delete("sb_access_token")
+            _cm.delete("sb_refresh_token")
 
 st.set_page_config(
     page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="expanded"
@@ -106,7 +132,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.46</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.47</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -158,16 +184,21 @@ with st.sidebar.expander("🔐 Account", expanded=not is_logged_in()):
     if is_logged_in():
         st.caption(f"Signed in as **{current_user()['email']}**")
         if st.button("Sign Out", key="sb_signout"):
+            _cm.delete("sb_access_token")
+            _cm.delete("sb_refresh_token")
             sign_out()
             st.rerun()
     else:
         _auth_mode = st.radio("", ["Sign In", "Sign Up"], horizontal=True, key="sb_auth_mode", label_visibility="collapsed")
         _sb_email = st.text_input("Email", key="sb_email")
         _sb_pw = st.text_input("Password", type="password", key="sb_pw")
+        _cookie_exp = datetime.now() + timedelta(days=30)
         if _auth_mode == "Sign In":
             if st.button("Sign In", key="sb_signin_btn"):
                 try:
                     sign_in(_sb_email, _sb_pw)
+                    _cm.set("sb_access_token", st.session_state["sb_access_token"], expires_at=_cookie_exp)
+                    _cm.set("sb_refresh_token", st.session_state["sb_refresh_token"], expires_at=_cookie_exp)
                     st.rerun()
                 except Exception as _e:
                     st.error(f"Sign in failed: {_e}")
@@ -175,6 +206,9 @@ with st.sidebar.expander("🔐 Account", expanded=not is_logged_in()):
             if st.button("Sign Up", key="sb_signup_btn"):
                 try:
                     sign_up(_sb_email, _sb_pw)
+                    if "sb_access_token" in st.session_state:
+                        _cm.set("sb_access_token", st.session_state["sb_access_token"], expires_at=_cookie_exp)
+                        _cm.set("sb_refresh_token", st.session_state["sb_refresh_token"], expires_at=_cookie_exp)
                     st.success("Account created! Check your email to confirm.")
                 except Exception as _e:
                     st.error(f"Sign up failed: {_e}")
@@ -194,6 +228,7 @@ if is_logged_in():
                         _pending = dict(_loaded["params"])
                         _pending["universe_name"] = _loaded["name"]
                         st.session_state["_import_pending"] = _pending
+                        st.session_state["sb_uni_save_name"] = _loaded["name"]
                         st.rerun()
             with _dc:
                 if st.button("Delete", key="sb_uni_delete", use_container_width=True):
@@ -262,6 +297,9 @@ with st.sidebar.expander("**🌐 Constants**", expanded=False):
     )
     st.text_input("↳ Note", placeholder="e.g. CA households, c2025", key="note_households", label_visibility="collapsed")
     st.text_input("↳ Source URL", placeholder="https://...", key="url_households", label_visibility="collapsed")
+    _u = st.session_state.get("url_households", "")
+    if _u.startswith(("http://", "https://")):
+        st.markdown(f"[↗ open source]({_u})")
     energy = st.number_input(
         "Electron Power per Capita", value=6378, step=10, key="energy"
     )
@@ -271,9 +309,15 @@ with st.sidebar.expander("**🌐 Constants**", expanded=False):
     )
     st.text_input("↳ Note", placeholder="e.g. Median CA household energy spend", key="note_energy", label_visibility="collapsed")
     st.text_input("↳ Source URL", placeholder="https://...", key="url_energy", label_visibility="collapsed")
+    _u = st.session_state.get("url_energy", "")
+    if _u.startswith(("http://", "https://")):
+        st.markdown(f"[↗ open source]({_u})")
     base_iq = st.number_input("Base IQ", value=100, step=1, key="base_iq")
     st.text_input("↳ Note", placeholder="e.g. Population mean IQ", key="note_base_iq", label_visibility="collapsed")
     st.text_input("↳ Source URL", placeholder="https://...", key="url_base_iq", label_visibility="collapsed")
+    _u = st.session_state.get("url_base_iq", "")
+    if _u.startswith(("http://", "https://")):
+        st.markdown(f"[↗ open source]({_u})")
 
 with st.sidebar.expander("**🧬 Per Capita Attributes**", expanded=False):
     # ── Brains per Class ──────────────────────────────────────────────────────

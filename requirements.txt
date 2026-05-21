@@ -2,3 +2,4 @@ streamlit
 plotly
 pandas
 supabase>=2.0.0
+extra-streamlit-components
