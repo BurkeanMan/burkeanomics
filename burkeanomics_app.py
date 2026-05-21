@@ -106,7 +106,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.43</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.44</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -206,7 +206,9 @@ if is_logged_in():
             if _save_name.strip():
                 _params = {k: v for k, v in st.session_state.items()
                            if k.startswith(_EXPORT_PREFIXES)}
+                _params["universe_name"] = _save_name.strip()
                 save_universe(_save_name.strip(), _params)
+                st.session_state["universe_name"] = _save_name.strip()
                 st.success(f"Saved '{_save_name.strip()}'")
             else:
                 st.error("Enter a name first.")
