@@ -171,7 +171,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.50</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.53</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -1695,7 +1695,7 @@ def _build_universe_fig(scen, label, height=420):
     for ann_y, ann_text, ann_color, ann_size in [
         (1.28, f"<b>{label}</b>", "white", 14),
         (1.15, "Bubble Size = $$$ Power", "#aaaaaa", 9),
-        (1.06, "⚠ WARNING: Nucleons 10X Larger IRL", "#ffaa44", 9),
+        (1.06, "⚠ WARNING: Nucleons 1,000s–10,000s× Larger IRL", "#ffaa44", 9),
     ]:
         fig.add_annotation(
             x=0.5, y=ann_y, xref="paper", yref="paper",
@@ -1729,6 +1729,152 @@ def _build_universe_fig(scen, label, height=420):
         title=dict(text=""),
     )
     return fig
+
+
+def _build_universe_3d(scen, label, height=540):
+    sfx_map = {"cCon (Left)": "c", "Center": "center", "dCon (Right)": "d"}
+    sfx = sfx_map[scen]
+    _dfpc = calculate_per_capita(scen).set_index("Class")
+    pw_e = float(_dfpc.loc["Electrons (throttled)", "Power ($)"])
+    pw_g = float(_dfpc.loc["GovNukes", "Power ($)"])
+    pw_p = float(_dfpc.loc["Providers", "Power ($)"])
+    pw_s = float(_dfpc.loc["SinSayers", "Power ($)"])
+    n_g = st.session_state.get(f"pop_g_{sfx}", 13)
+    n_p = st.session_state.get(f"pop_p_{sfx}", 40)
+    n_s = st.session_state.get(f"pop_s_{sfx}", 50)
+
+    log_lo = math.log10(min(pw_e, pw_g, pw_p, pw_s))
+    log_hi = math.log10(max(pw_e, pw_g, pw_p, pw_s))
+
+    def sz3d(v):
+        t = (math.log10(max(v, 1)) - log_lo) / max(log_hi - log_lo, 1e-9)
+        return round(0.06 + t * 0.19, 4)
+
+    d = json.dumps({
+        "r_e": sz3d(pw_e), "r_g": sz3d(pw_g),
+        "r_p": sz3d(pw_p), "r_s": sz3d(pw_s),
+        "pw_e": pw_e, "pw_g": pw_g, "pw_p": pw_p, "pw_s": pw_s,
+        "n_g": n_g, "n_p": n_p, "n_s": n_s,
+    })
+    H = height - 8
+
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{background:#0d1b2a;overflow:hidden;font-family:sans-serif}}
+canvas{{display:block}}
+#ov{{position:absolute;top:0;left:0;width:100%;pointer-events:none}}
+#ti{{text-align:center;color:#fff;font-size:13px;font-weight:bold;padding:8px 0 0;text-shadow:0 0 10px #4488ff}}
+#sb{{text-align:center;color:#888;font-size:9px;padding:2px 0 0}}
+#lg{{position:absolute;bottom:8px;left:10px;color:#ccc;font-size:10px;line-height:1.9}}
+</style>
+</head><body>
+<div id="ov">
+  <div id="ti">{label}</div>
+  <div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons 1,000s&#8211;10,000s&times; Larger IRL</div>
+</div>
+<div id="lg">
+  <span style="color:#aabbff">&#9679; Electron (YOU)</span><br>
+  <span style="color:#FFD700">&#9679; GovNukes &times;{n_g}</span><br>
+  <span style="color:#66cc66">&#9679; Providers &times;{n_p}</span><br>
+  <span style="color:#cc4444">&#9679; SinSayers &times;{n_s}</span>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const D={d};
+const W=window.innerWidth,H={H};
+const renderer=new THREE.WebGLRenderer({{antialias:true}});
+renderer.setSize(W,H);
+renderer.setPixelRatio(window.devicePixelRatio||1);
+document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0d1b2a);
+scene.fog=new THREE.FogExp2(0x0d1b2a,0.052);
+const camera=new THREE.PerspectiveCamera(55,W/H,0.01,100);
+camera.position.set(0,1.5,8);
+scene.add(new THREE.AmbientLight(0x223355,2.5));
+const ptLight=new THREE.PointLight(0x4466ff,4,10);
+scene.add(ptLight);
+const dirLight=new THREE.DirectionalLight(0xffffff,0.4);
+dirLight.position.set(4,6,4);
+scene.add(dirLight);
+
+function mkSphere(r,color,x,y,z,opacity,emInt){{
+  const m=new THREE.Mesh(
+    new THREE.SphereGeometry(r,12,10),
+    new THREE.MeshPhongMaterial({{color,emissive:color,emissiveIntensity:emInt||0.25,
+      transparent:opacity<1,opacity,shininess:50}})
+  );
+  m.position.set(x,y,z);
+  scene.add(m);
+  return m;
+}}
+
+function randShell(r){{
+  const th=2*Math.PI*Math.random(), ph=Math.acos(2*Math.random()-1);
+  const rs=r*(0.88+Math.random()*0.24);
+  return[rs*Math.sin(ph)*Math.cos(th),rs*Math.sin(ph)*Math.sin(th),rs*Math.cos(ph)];
+}}
+
+// Nemo
+mkSphere(0.18,0x0044cc,0,0,0,1.0,0.8);
+const hm=new THREE.Mesh(new THREE.SphereGeometry(0.38,12,10),
+  new THREE.MeshPhongMaterial({{color:0x2255ff,transparent:true,opacity:0.10,side:THREE.BackSide}}));
+scene.add(hm);
+
+// Background electrons
+for(let i=0;i<7;i++){{
+  const[x,y,z]=randShell(5.8+Math.random()*1.8);
+  mkSphere(D.r_e*0.85,0x223388,x,y,z,0.28,0.08);
+}}
+
+// Nucleons with Brownian state
+const nkns=[];
+function addGroup(n,r0,r3d,col){{
+  for(let i=0;i<n;i++){{
+    const[x,y,z]=randShell(r0);
+    const mesh=mkSphere(r3d,col,x,y,z,0.90,0.30);
+    nkns.push({{mesh,r0,
+      vx:(Math.random()-.5)*.009,
+      vy:(Math.random()-.5)*.009,
+      vz:(Math.random()-.5)*.009}});
+  }}
+}}
+addGroup(D.n_g,1.7,D.r_g,0xFFD700);
+addGroup(D.n_p,2.9,D.r_p,0x228B22);
+addGroup(D.n_s,4.1,D.r_s,0x8B0000);
+
+let t=0;
+function animate(){{
+  requestAnimationFrame(animate);
+  t+=0.004;
+  camera.position.x=8*Math.sin(t*.38);
+  camera.position.z=8*Math.cos(t*.38);
+  camera.position.y=1.5+1.1*Math.sin(t*.16);
+  camera.lookAt(0,0,0);
+  for(const n of nkns){{
+    n.vx+=(Math.random()-.5)*.0028;
+    n.vy+=(Math.random()-.5)*.0028;
+    n.vz+=(Math.random()-.5)*.0028;
+    const p=n.mesh.position;
+    const r=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+    const k=.020*(n.r0-r)/Math.max(r,.1);
+    n.vx+=p.x*k; n.vy+=p.y*k; n.vz+=p.z*k;
+    n.vx*=.972; n.vy*=.972; n.vz*=.972;
+    p.x+=n.vx; p.y+=n.vy; p.z+=n.vz;
+  }}
+  renderer.render(scene,camera);
+}}
+animate();
+window.addEventListener('resize',()=>{{
+  const w=window.innerWidth;
+  renderer.setSize(w,H);
+  camera.aspect=w/H;
+  camera.updateProjectionMatrix();
+}});
+</script>
+</body></html>"""
 
 
 # ---- Render sections ----
@@ -1922,7 +2068,7 @@ with st.expander("Populations", expanded=False):
 
 # ====================== UNIVERSE ======================
 st.markdown('<div id="universe"></div>', unsafe_allow_html=True)
-_utab3, _utab1 = st.tabs(["🔭 3-Panel", "🎯 Single View"])
+_utab3, _utab1, _utab3d = st.tabs(["🔭 3-Panel", "🎯 Single View", "🌌 3D"])
 with _utab3:
     _uni_cols = st.columns(3)
     for _ucol, (scen, label) in zip(_uni_cols, SCENARIOS):
@@ -1938,6 +2084,18 @@ with _utab1:
     st.plotly_chart(
         _build_universe_fig(_uni_scen_key[_uni_sel], _uni_sel, height=580),
         use_container_width=True,
+    )
+with _utab3d:
+    _3d_sel = st.radio(
+        "Scenario", ["Left", "Center", "Right"],
+        horizontal=True, key="uni_3d_sel",
+        label_visibility="collapsed",
+    )
+    _3d_scen_key = {"Left": "cCon (Left)", "Center": "Center", "Right": "dCon (Right)"}
+    _components.html(
+        _build_universe_3d(_3d_scen_key[_3d_sel], _3d_sel, height=560),
+        height=560,
+        scrolling=False,
     )
 
 # ====================== TABLES ======================

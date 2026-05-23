@@ -4,11 +4,7 @@
 mindmap
   root((Burkeanomics Sim))
     SaaS
-      Auth ✓
-      Universe CRUD ✓
-      Cookie auth persistence ✓
-      Password reset flow ✓
-      Email confirmation ✓
+
       Streamline account UI
       Stripe & Tiers
         Free vs Pro feature split
@@ -19,8 +15,6 @@ mindmap
         Competing scenarios
         Leaderboard
     Sim Features
-      Electron PC Attributes ✓
-      Adults per Electron ✓
       Universe description & annotations ✓
       Subclasses
         Requires new params UI first
@@ -30,17 +24,23 @@ mindmap
         Full-width panel or tabs
         Scales for subclass depth
     Charts & UI
-      Axis label polish ✓
-      S$nnT tick format ✓
-      IQ Points axis labels ✓
-      Suppress 0 ticks ✓
-      cCon slider suffixes ✓
       use_container_width deprecation
       Dark mode
+    Universe 3D → 4D
+      3D via Three.js WebGL component (st.components.html)
+        Electron (Nemo) fixed at center
+        Background Electrons at depth, low opacity
+        Nucleons in 3D space at N/E-ratio counts
+        Bubble size = per-capita Power
+      4D = Brownian Motion animation
+        Each nucleon has velocity vector (vx, vy, vz)
+        Soft spring attraction back to orbital band
+        Light inter-nucleon repulsion (no clumping)
+        requestAnimationFrame at 60fps
     PDF Export
       HTML fallback on Streamlit Cloud ✓
       Real PDF deferred to SaaS backend
     Bcon Content
       304 Human Dualities — E&N expansion
-      303 exists, not a Sim ref
+  
 ```
