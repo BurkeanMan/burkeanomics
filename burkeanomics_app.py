@@ -1589,7 +1589,14 @@ fig_pw.update_layout(
 fig_pw.add_annotation(**_FOOTER_ANNOTATION)
 
 # ---- Universe Visualization ----
-def _build_universe_fig(scen, label):
+_NUKE_SHADES = {
+    "s": ["#8B0000", "#B22222", "#A52A2A", "#C00000", "#7B0000"],
+    "p": ["#228B22", "#32CD32", "#1A7A1A", "#3CB371", "#006400"],
+    "g": ["#FFD700", "#DAA520", "#FFC000", "#B8860B", "#9A7800"],
+}
+
+
+def _build_universe_fig(scen, label, height=420):
     sfx_map = {"cCon (Left)": "c", "Center": "center", "dCon (Right)": "d"}
     sfx = sfx_map[scen]
     _dfpc = calculate_per_capita(scen).set_index("Class")
@@ -1626,32 +1633,41 @@ def _build_universe_fig(scen, label):
             hoverinfo="skip", showlegend=False,
         ))
 
-    # SinSayers — outermost ring
+    # SinSayers — outermost ring, 5 cycling shades
     sx, sy = _ring(n_s, 3.4)
     fig.add_trace(go.Scatter(
         x=sx, y=sy, mode="markers",
-        marker=dict(size=_sz(pw_s), color="#8B0000", opacity=0.9,
-                    line=dict(color="white", width=1)),
+        marker=dict(
+            size=_sz(pw_s),
+            color=[_NUKE_SHADES["s"][i % 5] for i in range(n_s)],
+            opacity=0.9, line=dict(color="white", width=1),
+        ),
         hovertemplate=f"SinSayer<br>${pw_s/1e6:.1f}M/cap<extra></extra>",
         showlegend=False,
     ))
 
-    # Providers
+    # Providers — 5 cycling shades
     px_v, py_v = _ring(n_p, 2.4)
     fig.add_trace(go.Scatter(
         x=px_v, y=py_v, mode="markers",
-        marker=dict(size=_sz(pw_p), color="#228B22", opacity=0.9,
-                    line=dict(color="white", width=1)),
+        marker=dict(
+            size=_sz(pw_p),
+            color=[_NUKE_SHADES["p"][i % 5] for i in range(n_p)],
+            opacity=0.9, line=dict(color="white", width=1),
+        ),
         hovertemplate=f"Provider<br>${pw_p/1e6:.1f}M/cap<extra></extra>",
         showlegend=False,
     ))
 
-    # GovNukes
+    # GovNukes — 5 cycling shades
     gx, gy = _ring(n_g, 1.4)
     fig.add_trace(go.Scatter(
         x=gx, y=gy, mode="markers",
-        marker=dict(size=_sz(pw_g), color="#FFD700", opacity=0.9,
-                    line=dict(color="white", width=1)),
+        marker=dict(
+            size=_sz(pw_g),
+            color=[_NUKE_SHADES["g"][i % 5] for i in range(n_g)],
+            opacity=0.9, line=dict(color="white", width=1),
+        ),
         hovertemplate=f"GovNuke<br>${pw_g/1e6:.0f}M/cap<extra></extra>",
         showlegend=False,
     ))
@@ -1675,7 +1691,20 @@ def _build_universe_fig(scen, label):
         showlegend=False,
     ))
 
-    # Legend below chart: class, count, power/cap
+    # Title + subtitle annotations in top margin
+    for ann_y, ann_text, ann_color, ann_size in [
+        (1.28, f"<b>{label}</b>", "white", 14),
+        (1.15, "Bubble Size = $$$ Power", "#aaaaaa", 9),
+        (1.06, "⚠ WARNING: Nucleons 10X Larger IRL", "#ffaa44", 9),
+    ]:
+        fig.add_annotation(
+            x=0.5, y=ann_y, xref="paper", yref="paper",
+            text=ann_text, showarrow=False,
+            font=dict(color=ann_color, size=ann_size),
+            xanchor="center", yanchor="bottom",
+        )
+
+    # Legend below chart
     for i, (cls, pwr, clr) in enumerate([
         ("Electron", f"${pw_e:,.0f}", "#aabbff"),
         (f"GovNuke ×{n_g}", f"${pw_g/1e6:.0f}M", "#FFD700"),
@@ -1691,14 +1720,13 @@ def _build_universe_fig(scen, label):
         )
 
     fig.update_layout(
-        height=420, showlegend=False,
+        height=height, showlegend=False,
         plot_bgcolor=bg, paper_bgcolor=bg,
         xaxis=dict(range=[-4.2, 4.2], showgrid=False, zeroline=False, showticklabels=False),
         yaxis=dict(range=[-4.2, 4.2], showgrid=False, zeroline=False,
                    showticklabels=False, scaleanchor="x", scaleratio=1),
-        margin=dict(t=40, b=105, l=10, r=10),
-        title=dict(text=f"<b>{label}</b>", x=0.5, xanchor="center",
-                   font=dict(size=14, color="white")),
+        margin=dict(t=95, b=105, l=10, r=10),
+        title=dict(text=""),
     )
     return fig
 
@@ -1894,11 +1922,23 @@ with st.expander("Populations", expanded=False):
 
 # ====================== UNIVERSE ======================
 st.markdown('<div id="universe"></div>', unsafe_allow_html=True)
-with st.expander("Universe Visualization", expanded=False):
+_utab3, _utab1 = st.tabs(["🔭 3-Panel", "🎯 Single View"])
+with _utab3:
     _uni_cols = st.columns(3)
     for _ucol, (scen, label) in zip(_uni_cols, SCENARIOS):
         with _ucol:
             st.plotly_chart(_build_universe_fig(scen, label), use_container_width=True)
+with _utab1:
+    _uni_sel = st.radio(
+        "Scenario", ["Left", "Center", "Right"],
+        horizontal=True, key="uni_single_sel",
+        label_visibility="collapsed",
+    )
+    _uni_scen_key = {"Left": "cCon (Left)", "Center": "Center", "Right": "dCon (Right)"}
+    st.plotly_chart(
+        _build_universe_fig(_uni_scen_key[_uni_sel], _uni_sel, height=580),
+        use_container_width=True,
+    )
 
 # ====================== TABLES ======================
 st.markdown('<div id="tables"></div>', unsafe_allow_html=True)
