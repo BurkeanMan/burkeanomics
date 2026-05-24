@@ -1193,20 +1193,28 @@ function animate(){{
 }}
 animate();
 function toggleFS(){{
-  if(!document.fullscreenElement){{
-    document.documentElement.requestFullscreen().catch(()=>{{}});
+  const cv=renderer.domElement;
+  const isFS=document.fullscreenElement||document.webkitFullscreenElement;
+  if(!isFS){{
+    const req=cv.requestFullscreen||cv.webkitRequestFullscreen;
+    if(req)req.call(cv).catch(()=>{{}});
     document.getElementById('fsbtn').textContent='✕';
   }}else{{
-    document.exitFullscreen();
-    document.getElementById('fsbtn').textContent='⛶';
+    const ex=document.exitFullscreen||document.webkitExitFullscreen;
+    if(ex)ex.call(document);
   }}
 }}
-document.addEventListener('fullscreenchange',()=>{{
+function _onFSChange(){{
+  const isFS=document.fullscreenElement||document.webkitFullscreenElement;
+  document.getElementById('fsbtn').textContent=isFS?'✕':'⛶';
   const w=window.innerWidth,h=window.innerHeight;
   renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
-}});
+}}
+document.addEventListener('fullscreenchange',_onFSChange);
+document.addEventListener('webkitfullscreenchange',_onFSChange);
 window.addEventListener('resize',()=>{{
-  const w=window.innerWidth,h=document.fullscreenElement?window.innerHeight:{H};
+  const isFS=document.fullscreenElement||document.webkitFullscreenElement;
+  const w=window.innerWidth,h=isFS?window.innerHeight:{H};
   renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
 }});
 </script>
