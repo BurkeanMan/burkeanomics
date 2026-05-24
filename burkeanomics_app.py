@@ -1018,10 +1018,52 @@ function updateArrow(arr,from,to){{
 const UE=new THREE.Vector3(0,0,0);
 
 // UE — focal Electron, stays fixed
-const ueMesh=mkSphere(0.03,0x99bbdd,0,0,0,1.0,0.95);
-const hm=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),
-  new THREE.MeshPhongMaterial({{color:0x88aacc,transparent:true,opacity:0.18,side:THREE.BackSide}}));
-hm.scale.setScalar(0.06);scene.add(hm);
+// UE — plasma globe: hot-pink sphere + glow halos + electric arcs
+const ueMesh=mkSphere(0.03,0xff44cc,0,0,0,1.0,2.2);
+[{{r:0.10,c:0xff44cc,o:0.40}},{{r:0.24,c:0xcc44ff,o:0.16}},{{r:0.52,c:0x4455ff,o:0.06}}].forEach(g=>{{
+  const m=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),
+    new THREE.MeshBasicMaterial({{color:g.c,transparent:true,opacity:g.o,
+      blending:THREE.AdditiveBlending,depthWrite:false}}));
+  m.scale.setScalar(g.r);scene.add(m);
+}});
+const _ARC_N=12,_ARC_S=8;
+const _arcs=[];
+const _arcCols=[0xaaddff,0xaaddff,0xaaddff,0xaaddff,0xaaddff,
+                0xbb77ff,0xbb77ff,0xbb77ff,0xff66cc,0xff66cc,0xccaaff,0x88ccff];
+for(let i=0;i<_ARC_N;i++){{
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array((_ARC_S+1)*3),3));
+  const mat=new THREE.LineBasicMaterial({{color:_arcCols[i],transparent:true,opacity:0,
+    blending:THREE.AdditiveBlending,depthTest:false,depthWrite:false}});
+  const line=new THREE.Line(geo,mat);scene.add(line);
+  const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+  _arcs.push({{line,geo,
+    dx:Math.sin(ph)*Math.cos(th),dy:Math.sin(ph)*Math.sin(th),dz:Math.cos(ph),
+    len:0.7+Math.random()*0.8,
+    life:Math.floor(Math.random()*18),maxLife:10+Math.floor(Math.random()*18)}});
+}}
+function _arcTick(){{
+  for(const a of _arcs){{
+    a.life++;
+    if(a.life>=a.maxLife){{
+      const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+      a.dx=Math.sin(ph)*Math.cos(th);a.dy=Math.sin(ph)*Math.sin(th);a.dz=Math.cos(ph);
+      a.len=0.7+Math.random()*0.8;a.life=0;a.maxLife=10+Math.floor(Math.random()*18);
+    }}
+    const p=a.geo.attributes.position.array;
+    let px=a.dx*0.035,py=a.dy*0.035,pz=a.dz*0.035;
+    const st=a.len/_ARC_S;
+    for(let i=0;i<=_ARC_S;i++){{
+      const jit=0.06*(1-i/_ARC_S*0.4);
+      p[i*3]  =px+(Math.random()-.5)*jit;
+      p[i*3+1]=py+(Math.random()-.5)*jit;
+      p[i*3+2]=pz+(Math.random()-.5)*jit;
+      px+=a.dx*st;py+=a.dy*st;pz+=a.dz*st;
+    }}
+    a.geo.attributes.position.needsUpdate=true;
+    a.line.material.opacity=Math.sin(a.life/a.maxLife*Math.PI)*0.90;
+  }}
+}}
 let ueLabel=null;
 if(D.mono){{
   ueLabel=mkLabel('E','#FFD700');ueLabel.scale.set(0.10,0.10,1);scene.add(ueLabel);
@@ -1125,6 +1167,7 @@ function animate(){{
     _tmpV.copy(camera.position).normalize().multiplyScalar(0.06);
     ueLabel.position.set(_tmpV.x,_tmpV.y,_tmpV.z);
   }}
+  _arcTick();
 
   // Background electron Brownian
   for(const e of bgEs){{
