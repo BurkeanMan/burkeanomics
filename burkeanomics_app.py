@@ -171,7 +171,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.53</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.62</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -996,7 +996,7 @@ function mkSphere(initR,color,x,y,z,opacity,emInt){{
 function mkLabel(letter,col){{
   const cv=document.createElement('canvas');cv.width=cv.height=64;
   const cx=cv.getContext('2d');
-  cx.fillStyle=col;cx.font='600 24px Georgia, serif';
+  cx.fillStyle=col;cx.font='500 24px Georgia, serif';
   cx.textAlign='center';cx.textBaseline='middle';cx.fillText(letter,32,32);
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({{map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}}));
   return sp;
