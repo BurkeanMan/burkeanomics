@@ -909,11 +909,15 @@ def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
         def _sz_nuke(v, lo=_nlo, hi=_nhi):
             t = math.sqrt(max(0.0, (v - lo) / max(hi - lo, 1e-9)))
             return round(0.08 + t * 0.22, 4)
+        _pe = max(_pw_e, 1)
         scens[lbl] = {
             "r_e": 0.06, "r_g": _sz_nuke(_pw_g), "r_p": _sz_nuke(_pw_p), "r_s": _sz_nuke(_pw_s),
             "n_g": st.session_state.get(f"pop_g_{sfx}", 13),
             "n_p": st.session_state.get(f"pop_p_{sfx}", 40),
             "n_s": st.session_state.get(f"pop_s_{sfx}", 50),
+            "mult_g": round(_pw_g / _pe),
+            "mult_p": round(_pw_p / _pe),
+            "mult_s": round(_pw_s / _pe),
         }
 
     max_n_g = max(v["n_g"] for v in scens.values())
@@ -952,10 +956,10 @@ canvas{{display:block}}
 <div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons 1,000s&#8211;10,000s&times; Larger IRL</div>
 <button id="fsbtn" onclick="toggleFS()" title="Fullscreen">&#x26F6;</button>
 <div id="lg">
-  <span style="color:#aaccee">&#9679; Electrons</span><br>
-  <span style="color:#FFD700">&#9679; GovNukes</span><br>
-  <span style="color:#66cc66">&#9679; Providers</span><br>
-  <span style="color:#cc4444">&#9679; SinSayers</span>
+  <span style="color:#aaccee">&#9679; Electrons <span id="lg-e" style="color:#778899">1&times;</span></span><br>
+  <span style="color:#FFD700">&#9679; GovNukes <span id="lg-g" style="color:#778899"></span></span><br>
+  <span style="color:#66cc66">&#9679; Providers <span id="lg-p" style="color:#778899"></span></span><br>
+  <span style="color:#cc4444">&#9679; SinSayers <span id="lg-s" style="color:#778899"></span></span>
 </div>
 <div id="footer">&copy; 2026 David Burkean &bull; Commercial use by permission &bull; All Rights Reserved</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1078,11 +1082,21 @@ addGroup(D.maxNG,1.8,0.55,D.scens.Left.r_g,0xFFD700,'g','G');
 addGroup(D.maxNP,3.0,0.90,D.scens.Left.r_p,0x228B22,'p','P');
 addGroup(D.maxNS,4.2,1.20,D.scens.Left.r_s,0x8B0000,'s','S');
 
+function fmtX(n){{return n.toLocaleString()+'×';}}
+function updateLegend(name){{
+  const sc=D.scens[name];
+  document.getElementById('lg-g').textContent=fmtX(sc.mult_g);
+  document.getElementById('lg-p').textContent=fmtX(sc.mult_p);
+  document.getElementById('lg-s').textContent=fmtX(sc.mult_s);
+}}
+updateLegend('Left');
+
 // Scenario switch — update tween targets
 function switchScen(name){{
   curScen=name;
   document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('active'));
   document.getElementById('btn-'+name).classList.add('active');
+  updateLegend(name);
   const sc=D.scens[name];
   let gi=0,pi=0,si=0;
   for(const n of nkns){{
