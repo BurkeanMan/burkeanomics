@@ -939,6 +939,9 @@ body{{background:#0d1b2a;overflow:hidden;font-family:sans-serif}}
 canvas{{display:block}}
 #lg{{position:absolute;bottom:8px;left:10px;color:#dde;font-size:20px;line-height:2.0;pointer-events:none;
      background:rgba(0,8,20,0.60);border-radius:8px;padding:10px 18px}}
+#lg table{{border-collapse:collapse;width:100%}}
+#lg td.nm{{text-align:left;padding-right:18px}}
+#lg td.xv{{text-align:right;color:#778899}}
 #footer{{position:absolute;bottom:8px;right:12px;color:#8899aa;font-size:16px;pointer-events:none;text-align:right;line-height:1.6}}
 #btns{{position:absolute;top:6px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto;z-index:10}}
 #sb{{position:absolute;top:38px;left:0;width:100%;text-align:center;color:#99aabb;font-size:18px;pointer-events:none;z-index:9}}
@@ -956,12 +959,12 @@ canvas{{display:block}}
 </div>
 <div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; WARNING: Nucleons 1,000s&times; Larger IRL</div>
 <button id="fsbtn" onclick="toggleFS()" title="Fullscreen">&#x26F6;</button>
-<div id="lg">
-  <span style="color:#aaccee">&#9679; Electrons <span id="lg-e" style="color:#778899">1&times;</span></span><br>
-  <span style="color:#FFD700">&#9679; GovNukes <span id="lg-g" style="color:#778899"></span></span><br>
-  <span style="color:#66cc66">&#9679; Providers <span id="lg-p" style="color:#778899"></span></span><br>
-  <span style="color:#cc4444">&#9679; SinSayers <span id="lg-s" style="color:#778899"></span></span>
-</div>
+<div id="lg"><table>
+  <tr><td class="nm" style="color:#aaccee">Electrons</td><td class="xv" id="lg-e">1&times;</td></tr>
+  <tr><td class="nm" style="color:#FFD700">GovNukes</td><td class="xv" id="lg-g"></td></tr>
+  <tr><td class="nm" style="color:#66cc66">Providers</td><td class="xv" id="lg-p"></td></tr>
+  <tr><td class="nm" style="color:#cc4444">SinSayers</td><td class="xv" id="lg-s"></td></tr>
+</table></div>
 <div id="footer">&copy; 2026 David Burkean &bull; Commercial use by permission &bull; All Rights Reserved</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
