@@ -171,7 +171,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.62</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.63</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -904,13 +904,13 @@ def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
         _pw_g = float(_dfpc.loc["GovNukes", "Power ($)"])
         _pw_p = float(_dfpc.loc["Providers", "Power ($)"])
         _pw_s = float(_dfpc.loc["SinSayers", "Power ($)"])
-        _lo = math.log10(min(_pw_e, _pw_g, _pw_p, _pw_s))
-        _hi = math.log10(max(_pw_e, _pw_g, _pw_p, _pw_s))
-        def _sz(v, lo=_lo, hi=_hi):
-            t = (math.log10(max(v, 1)) - lo) / max(hi - lo, 1e-9)
-            return round(0.06 + t * 0.19, 4)
+        _nlo = min(_pw_g, _pw_p, _pw_s)
+        _nhi = max(_pw_g, _pw_p, _pw_s)
+        def _sz_nuke(v, lo=_nlo, hi=_nhi):
+            t = math.sqrt(max(0.0, (v - lo) / max(hi - lo, 1e-9)))
+            return round(0.08 + t * 0.22, 4)
         scens[lbl] = {
-            "r_e": _sz(_pw_e), "r_g": _sz(_pw_g), "r_p": _sz(_pw_p), "r_s": _sz(_pw_s),
+            "r_e": 0.06, "r_g": _sz_nuke(_pw_g), "r_p": _sz_nuke(_pw_p), "r_s": _sz_nuke(_pw_s),
             "n_g": st.session_state.get(f"pop_g_{sfx}", 13),
             "n_p": st.session_state.get(f"pop_p_{sfx}", 40),
             "n_s": st.session_state.get(f"pop_s_{sfx}", 50),
@@ -934,6 +934,7 @@ def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
 body{{background:#0d1b2a;overflow:hidden;font-family:sans-serif}}
 canvas{{display:block}}
 #lg{{position:absolute;bottom:8px;left:10px;color:#ccc;font-size:10px;line-height:1.9;pointer-events:none}}
+#footer{{position:absolute;bottom:6px;right:10px;color:#394a5a;font-size:8px;pointer-events:none;text-align:right;line-height:1.5}}
 #btns{{position:absolute;top:6px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto;z-index:10}}
 #sb{{position:absolute;top:38px;left:0;width:100%;text-align:center;color:#666;font-size:9px;pointer-events:none;z-index:9}}
 #fsbtn{{position:absolute;top:6px;right:8px;background:#1e3a5f;color:#aaccee;border:1px solid #335577;
@@ -956,6 +957,7 @@ canvas{{display:block}}
   <span style="color:#66cc66">&#9679; Providers</span><br>
   <span style="color:#cc4444">&#9679; SinSayers</span>
 </div>
+<div id="footer">&copy; 2026 David Burkean &bull; Commercial use by permission &bull; All Rights Reserved</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const D={d};
@@ -1137,12 +1139,13 @@ function animate(){{
     }}
     if(D.mono&&n.label)n.label.visible=true;
 
-    // Brownian motion
-    n.vx+=(Math.random()-.5)*.0028;n.vy+=(Math.random()-.5)*.0028;n.vz+=(Math.random()-.5)*.0028;
+    // Brownian motion — loose spring, soft outer fence at r>6.5
+    n.vx+=(Math.random()-.5)*.003;n.vy+=(Math.random()-.5)*.003;n.vz+=(Math.random()-.5)*.003;
     const p=n.mesh.position;
     const r=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
-    const k=.010*(n.r0-r)/Math.max(r,.1);
+    const k=.003*(n.r0-r)/Math.max(r,.1);
     n.vx+=p.x*k;n.vy+=p.y*k;n.vz+=p.z*k;
+    if(r>6.5){{const pull=0.008*(6.5-r)/r;n.vx+=p.x*pull;n.vy+=p.y*pull;n.vz+=p.z*pull;}}
     n.vx*=.974;n.vy*=.974;n.vz*=.974;
     p.x+=n.vx;p.y+=n.vy;p.z+=n.vz;
 
