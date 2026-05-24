@@ -907,8 +907,8 @@ def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
         _nlo = min(_pw_g, _pw_p, _pw_s)
         _nhi = max(_pw_g, _pw_p, _pw_s)
         def _sz_nuke(v, lo=_nlo, hi=_nhi):
-            t = math.sqrt(max(0.0, (v - lo) / max(hi - lo, 1e-9)))
-            return round(0.08 + t * 0.22, 4)
+            t = max(0.0, (v - lo) / max(hi - lo, 1e-9))
+            return round(0.10 + t * 0.45, 4)
         _pe = max(_pw_e, 1)
         scens[lbl] = {
             "r_e": 0.06, "r_g": _sz_nuke(_pw_g), "r_p": _sz_nuke(_pw_p), "r_s": _sz_nuke(_pw_s),
