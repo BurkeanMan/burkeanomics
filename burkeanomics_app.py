@@ -1235,37 +1235,35 @@ function animate(){{
   renderer.render(scene,camera);
 }}
 animate();
+// Full-page fullscreen so overlay divs travel with the canvas
 let _fakeFS=false;
+const _fsRoot=document.documentElement;
 function _enterFakeFS(){{
   _fakeFS=true;
   document.getElementById('fsbtn').textContent='✕';
   const w=window.innerWidth,h=window.screen.height;
   window.parent.postMessage({{isStreamlitMessage:true,type:'streamlit:setFrameHeight',height:h+60}},'*');
-  renderer.domElement.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:100';
   renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
-  ['btns','sb','fsbtn','lg','footer'].forEach(id=>{{const el=document.getElementById(id);if(el){{el.style.position='fixed';el.style.zIndex='200';}}}});
 }}
 function _exitFakeFS(){{
   _fakeFS=false;
   document.getElementById('fsbtn').textContent='⛶';
   window.parent.postMessage({{isStreamlitMessage:true,type:'streamlit:setFrameHeight',height:{H}+8}},'*');
-  renderer.domElement.style.cssText='';
   renderer.setSize(window.innerWidth,{H});camera.aspect=window.innerWidth/{H};camera.updateProjectionMatrix();
-  ['btns','sb','fsbtn','lg','footer'].forEach(id=>{{const el=document.getElementById(id);if(el){{el.style.position='absolute';el.style.zIndex='';}}}});
 }}
 function toggleFS(){{
   if(_fakeFS){{_exitFakeFS();return;}}
-  const cv=renderer.domElement;
   const isFS=document.fullscreenElement||document.webkitFullscreenElement;
   if(isFS){{const ex=document.exitFullscreen||document.webkitExitFullscreen;if(ex)ex.call(document);return;}}
-  const req=cv.requestFullscreen||cv.webkitRequestFullscreen;
-  if(req)req.call(cv).then(()=>{{document.getElementById('fsbtn').textContent='✕';}}).catch(()=>_enterFakeFS());
+  const req=_fsRoot.requestFullscreen||_fsRoot.webkitRequestFullscreen;
+  if(req)req.call(_fsRoot).then(()=>{{document.getElementById('fsbtn').textContent='✕';}}).catch(()=>_enterFakeFS());
   else _enterFakeFS();
 }}
 function _onFSChange(){{
   const isFS=document.fullscreenElement||document.webkitFullscreenElement;
-  if(isFS){{const w=window.innerWidth,h=window.innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}}
-  else if(!_fakeFS){{document.getElementById('fsbtn').textContent='⛶';}}
+  const w=window.innerWidth,h=isFS?window.innerHeight:{H};
+  renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
+  if(!isFS&&!_fakeFS)document.getElementById('fsbtn').textContent='⛶';
 }}
 document.addEventListener('fullscreenchange',_onFSChange);
 document.addEventListener('webkitfullscreenchange',_onFSChange);
