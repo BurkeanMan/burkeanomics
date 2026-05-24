@@ -933,23 +933,23 @@ def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
 *{{margin:0;padding:0;box-sizing:border-box}}
 body{{background:#0d1b2a;overflow:hidden;font-family:sans-serif}}
 canvas{{display:block}}
-#ov{{position:absolute;top:0;left:0;width:100%;pointer-events:none}}
-#sb{{text-align:center;color:#888;font-size:9px;padding:4px 0 0}}
 #lg{{position:absolute;bottom:8px;left:10px;color:#ccc;font-size:10px;line-height:1.9;pointer-events:none}}
-#btns{{position:absolute;top:6px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto}}
+#btns{{position:absolute;top:6px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto;z-index:10}}
+#sb{{position:absolute;top:38px;left:0;width:100%;text-align:center;color:#666;font-size:9px;pointer-events:none;z-index:9}}
+#fsbtn{{position:absolute;top:6px;right:8px;background:#1e3a5f;color:#aaccee;border:1px solid #335577;
+        border-radius:4px;padding:3px 8px;font-size:15px;cursor:pointer;pointer-events:auto;z-index:10;line-height:1}}
 .sbtn{{background:#1e3a5f;color:#aaccee;border:1px solid #335577;border-radius:4px;
        padding:3px 12px;font-size:12px;cursor:pointer;font-weight:600}}
 .sbtn.active{{background:#2255aa;color:#ffffff;border-color:#4477cc}}
 </style>
 </head><body>
-<div id="ov">
-  <div id="btns">
-    <button class="sbtn active" id="btn-Left" onclick="switchScen('Left')">Left</button>
-    <button class="sbtn" id="btn-Center" onclick="switchScen('Center')">Center</button>
-    <button class="sbtn" id="btn-Right" onclick="switchScen('Right')">Right</button>
-  </div>
-  <div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons 1,000s&#8211;10,000s&times; Larger IRL</div>
+<div id="btns">
+  <button class="sbtn active" id="btn-Left" onclick="switchScen('Left')">Left</button>
+  <button class="sbtn" id="btn-Center" onclick="switchScen('Center')">Center</button>
+  <button class="sbtn" id="btn-Right" onclick="switchScen('Right')">Right</button>
 </div>
+<div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons 1,000s&#8211;10,000s&times; Larger IRL</div>
+<button id="fsbtn" onclick="toggleFS()" title="Fullscreen">&#x26F6;</button>
 <div id="lg">
   <span style="color:#aaccee">&#9679; Electrons</span><br>
   <span style="color:#FFD700">&#9679; GovNukes</span><br>
@@ -1174,9 +1174,22 @@ function animate(){{
   renderer.render(scene,camera);
 }}
 animate();
+function toggleFS(){{
+  if(!document.fullscreenElement){{
+    document.documentElement.requestFullscreen().catch(()=>{{}});
+    document.getElementById('fsbtn').textContent='✕';
+  }}else{{
+    document.exitFullscreen();
+    document.getElementById('fsbtn').textContent='⛶';
+  }}
+}}
+document.addEventListener('fullscreenchange',()=>{{
+  const w=window.innerWidth,h=window.innerHeight;
+  renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
+}});
 window.addEventListener('resize',()=>{{
-  const w=window.innerWidth;
-  renderer.setSize(w,H);camera.aspect=w/H;camera.updateProjectionMatrix();
+  const w=window.innerWidth,h=document.fullscreenElement?window.innerHeight:{H};
+  renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
 }});
 </script>
 </body></html>"""
