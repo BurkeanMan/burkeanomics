@@ -749,6 +749,432 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ---- Universe Visualization ----
+_NUKE_SHADES = {
+    "s": ["#8B0000", "#B22222", "#A52A2A", "#C00000", "#7B0000"],
+    "p": ["#228B22", "#32CD32", "#1A7A1A", "#3CB371", "#006400"],
+    "g": ["#FFD700", "#DAA520", "#FFC000", "#B8860B", "#9A7800"],
+}
+
+
+def _build_universe_fig(scen, label, height=420):
+    sfx_map = {"cCon (Left)": "c", "Center": "center", "dCon (Right)": "d"}
+    sfx = sfx_map[scen]
+    _dfpc = calculate_per_capita(scen).set_index("Class")
+    pw_e = float(_dfpc.loc["Electrons (throttled)", "Power ($)"])
+    pw_g = float(_dfpc.loc["GovNukes", "Power ($)"])
+    pw_p = float(_dfpc.loc["Providers", "Power ($)"])
+    pw_s = float(_dfpc.loc["SinSayers", "Power ($)"])
+    n_g = st.session_state.get(f"pop_g_{sfx}", 13)
+    n_p = st.session_state.get(f"pop_p_{sfx}", 40)
+    n_s = st.session_state.get(f"pop_s_{sfx}", 50)
+
+    log_lo = math.log10(min(pw_e, pw_g, pw_p, pw_s))
+    log_hi = math.log10(max(pw_e, pw_g, pw_p, pw_s))
+
+    def _sz(v):
+        t = (math.log10(max(v, 1)) - log_lo) / max(log_hi - log_lo, 1e-9)
+        return 8 + t * 24
+
+    def _ring(n, r):
+        return (
+            [r * math.cos(2 * math.pi * i / n) for i in range(n)],
+            [r * math.sin(2 * math.pi * i / n) for i in range(n)],
+        )
+
+    bg = "#0d1b2a"
+    fig = go.Figure()
+
+    # Faint orbital rings
+    for r in [0.5, 1.4, 2.4, 3.4]:
+        th = [2 * math.pi * i / 120 for i in range(121)]
+        fig.add_trace(go.Scatter(
+            x=[r * math.cos(t) for t in th], y=[r * math.sin(t) for t in th],
+            mode="lines", line=dict(color="rgba(255,255,255,0.07)", width=1),
+            hoverinfo="skip", showlegend=False,
+        ))
+
+    # SinSayers — outermost ring, 5 cycling shades
+    sx, sy = _ring(n_s, 3.4)
+    fig.add_trace(go.Scatter(
+        x=sx, y=sy, mode="markers",
+        marker=dict(
+            size=_sz(pw_s),
+            color=[_NUKE_SHADES["s"][i % 5] for i in range(n_s)],
+            opacity=0.9, line=dict(color="white", width=1),
+        ),
+        hovertemplate=f"SinSayer<br>${pw_s/1e6:.1f}M/cap<extra></extra>",
+        showlegend=False,
+    ))
+
+    # Providers — 5 cycling shades
+    px_v, py_v = _ring(n_p, 2.4)
+    fig.add_trace(go.Scatter(
+        x=px_v, y=py_v, mode="markers",
+        marker=dict(
+            size=_sz(pw_p),
+            color=[_NUKE_SHADES["p"][i % 5] for i in range(n_p)],
+            opacity=0.9, line=dict(color="white", width=1),
+        ),
+        hovertemplate=f"Provider<br>${pw_p/1e6:.1f}M/cap<extra></extra>",
+        showlegend=False,
+    ))
+
+    # GovNukes — 5 cycling shades
+    gx, gy = _ring(n_g, 1.4)
+    fig.add_trace(go.Scatter(
+        x=gx, y=gy, mode="markers",
+        marker=dict(
+            size=_sz(pw_g),
+            color=[_NUKE_SHADES["g"][i % 5] for i in range(n_g)],
+            opacity=0.9, line=dict(color="white", width=1),
+        ),
+        hovertemplate=f"GovNuke<br>${pw_g/1e6:.0f}M/cap<extra></extra>",
+        showlegend=False,
+    ))
+
+    # Background electrons
+    ex, ey = _ring(5, 0.5)
+    fig.add_trace(go.Scatter(
+        x=ex, y=ey, mode="markers",
+        marker=dict(size=_sz(pw_e), color="#3355aa", opacity=0.75),
+        hovertemplate=f"Electron<br>${pw_e:,.0f}/cap<extra></extra>",
+        showlegend=False,
+    ))
+
+    # Nemo — the focal Electron
+    fig.add_trace(go.Scatter(
+        x=[0], y=[0], mode="markers+text",
+        marker=dict(size=20, color="#00008B", line=dict(color="white", width=2)),
+        text=["E"], textfont=dict(color="white", size=9),
+        textposition="middle center",
+        hovertemplate=f"Electron (YOU)<br>${pw_e:,.0f}/cap<extra></extra>",
+        showlegend=False,
+    ))
+
+    # Title + subtitle annotations in top margin
+    for ann_y, ann_text, ann_color, ann_size in [
+        (1.28, f"<b>{label}</b>", "white", 14),
+        (1.15, "Bubble Size = $$$ Power", "#aaaaaa", 9),
+        (1.06, "⚠ WARNING: Nucleons 1,000s–10,000s× Larger IRL", "#ffaa44", 9),
+    ]:
+        fig.add_annotation(
+            x=0.5, y=ann_y, xref="paper", yref="paper",
+            text=ann_text, showarrow=False,
+            font=dict(color=ann_color, size=ann_size),
+            xanchor="center", yanchor="bottom",
+        )
+
+    # Legend below chart
+    for i, (cls, pwr, clr) in enumerate([
+        ("Electron", f"${pw_e:,.0f}", "#aabbff"),
+        (f"GovNuke ×{n_g}", f"${pw_g/1e6:.0f}M", "#FFD700"),
+        (f"Provider ×{n_p}", f"${pw_p/1e6:.1f}M", "#66cc66"),
+        (f"SinSayer ×{n_s}", f"${pw_s/1e6:.1f}M", "#dd5555"),
+    ]):
+        fig.add_annotation(
+            x=0.13 + i * 0.25, y=-0.02,
+            xref="paper", yref="paper",
+            text=f"<b>{cls}</b><br>{pwr}/cap",
+            showarrow=False, font=dict(color=clr, size=11),
+            xanchor="center", yanchor="top", align="center",
+        )
+
+    fig.update_layout(
+        height=height, showlegend=False,
+        plot_bgcolor=bg, paper_bgcolor=bg,
+        xaxis=dict(range=[-4.2, 4.2], showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(range=[-4.2, 4.2], showgrid=False, zeroline=False,
+                   showticklabels=False, scaleanchor="x", scaleratio=1),
+        margin=dict(t=95, b=105, l=10, r=10),
+        title=dict(text=""),
+    )
+    return fig
+
+
+def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
+    sfx_map = {"cCon (Left)": "c", "Center": "center", "dCon (Right)": "d"}
+    scen_labels = [("Left", "cCon (Left)"), ("Center", "Center"), ("Right", "dCon (Right)")]
+
+    scens = {}
+    for lbl, scen_key in scen_labels:
+        sfx = sfx_map[scen_key]
+        _dfpc = calculate_per_capita(scen_key).set_index("Class")
+        _pw_e = float(_dfpc.loc["Electrons (throttled)", "Power ($)"])
+        _pw_g = float(_dfpc.loc["GovNukes", "Power ($)"])
+        _pw_p = float(_dfpc.loc["Providers", "Power ($)"])
+        _pw_s = float(_dfpc.loc["SinSayers", "Power ($)"])
+        _lo = math.log10(min(_pw_e, _pw_g, _pw_p, _pw_s))
+        _hi = math.log10(max(_pw_e, _pw_g, _pw_p, _pw_s))
+        def _sz(v, lo=_lo, hi=_hi):
+            t = (math.log10(max(v, 1)) - lo) / max(hi - lo, 1e-9)
+            return round(0.06 + t * 0.19, 4)
+        scens[lbl] = {
+            "r_e": _sz(_pw_e), "r_g": _sz(_pw_g), "r_p": _sz(_pw_p), "r_s": _sz(_pw_s),
+            "n_g": st.session_state.get(f"pop_g_{sfx}", 13),
+            "n_p": st.session_state.get(f"pop_p_{sfx}", 40),
+            "n_s": st.session_state.get(f"pop_s_{sfx}", 50),
+        }
+
+    max_n_g = max(v["n_g"] for v in scens.values())
+    max_n_p = max(v["n_p"] for v in scens.values())
+    max_n_s = max(v["n_s"] for v in scens.values())
+
+    d = json.dumps({
+        "scens": scens,
+        "maxNG": max_n_g, "maxNP": max_n_p, "maxNS": max_n_s,
+        "arrows": show_arrows, "mono": show_mono,
+    })
+    H = height - 8
+
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{background:#0d1b2a;overflow:hidden;font-family:sans-serif}}
+canvas{{display:block}}
+#ov{{position:absolute;top:0;left:0;width:100%;pointer-events:none}}
+#sb{{text-align:center;color:#888;font-size:9px;padding:4px 0 0}}
+#lg{{position:absolute;bottom:8px;left:10px;color:#ccc;font-size:10px;line-height:1.9;pointer-events:none}}
+#btns{{position:absolute;top:6px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto}}
+.sbtn{{background:#1e3a5f;color:#aaccee;border:1px solid #335577;border-radius:4px;
+       padding:3px 12px;font-size:12px;cursor:pointer;font-weight:600}}
+.sbtn.active{{background:#2255aa;color:#ffffff;border-color:#4477cc}}
+</style>
+</head><body>
+<div id="ov">
+  <div id="btns">
+    <button class="sbtn active" id="btn-Left" onclick="switchScen('Left')">Left</button>
+    <button class="sbtn" id="btn-Center" onclick="switchScen('Center')">Center</button>
+    <button class="sbtn" id="btn-Right" onclick="switchScen('Right')">Right</button>
+  </div>
+  <div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons 1,000s&#8211;10,000s&times; Larger IRL</div>
+</div>
+<div id="lg">
+  <span style="color:#aaccee">&#9679; Electrons</span><br>
+  <span style="color:#FFD700">&#9679; GovNukes</span><br>
+  <span style="color:#66cc66">&#9679; Providers</span><br>
+  <span style="color:#cc4444">&#9679; SinSayers</span>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const D={d};
+const W=window.innerWidth,H={H};
+let curScen='Left';
+const LERP=0.042;
+
+const renderer=new THREE.WebGLRenderer({{antialias:true}});
+renderer.setSize(W,H);renderer.setPixelRatio(window.devicePixelRatio||1);
+document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0d1b2a);
+scene.fog=new THREE.FogExp2(0x0d1b2a,0.040);
+const camera=new THREE.PerspectiveCamera(55,W/H,0.01,100);
+camera.position.set(0,1.5,8);
+scene.add(new THREE.AmbientLight(0x334466,2.5));
+const ptLight=new THREE.PointLight(0x88aaff,3,10);scene.add(ptLight);
+const dirLight=new THREE.DirectionalLight(0xffffff,0.4);dirLight.position.set(4,6,4);scene.add(dirLight);
+
+function gauss(){{
+  let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}}
+function loosePt(r0,sig){{
+  const th=2*Math.PI*Math.random(),ph=Math.acos(2*Math.random()-1);
+  const r=Math.max(0.3,r0+gauss()*sig);
+  return[r*Math.sin(ph)*Math.cos(th),r*Math.sin(ph)*Math.sin(th),r*Math.cos(ph)];
+}}
+// Unit-sphere + scale so we can tween size
+function mkSphere(initR,color,x,y,z,opacity,emInt){{
+  const m=new THREE.Mesh(
+    new THREE.SphereGeometry(1,10,8),
+    new THREE.MeshPhongMaterial({{color,emissive:color,emissiveIntensity:emInt||0.25,
+      transparent:true,opacity,shininess:55}})
+  );
+  m.scale.setScalar(initR);m.position.set(x,y,z);scene.add(m);return m;
+}}
+function mkLabel(letter,col){{
+  const cv=document.createElement('canvas');cv.width=cv.height=64;
+  const cx=cv.getContext('2d');
+  cx.fillStyle=col;cx.font='bold 42px sans-serif';
+  cx.textAlign='center';cx.textBaseline='middle';cx.fillText(letter,32,32);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({{map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}}));
+  return sp;
+}}
+function updateArrow(arr,from,to){{
+  const dir=new THREE.Vector3().subVectors(to,from);
+  const len=dir.length();if(len<0.15)return;
+  arr.position.copy(from);arr.setDirection(dir.normalize());
+  arr.setLength(len,Math.min(0.16,len*0.22),Math.min(0.08,len*0.11));
+}}
+
+const UE=new THREE.Vector3(0,0,0);
+
+// UE — focal Electron, stays fixed
+const ueMesh=mkSphere(0.22,0x99bbdd,0,0,0,1.0,0.85);
+const hm=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),
+  new THREE.MeshPhongMaterial({{color:0x88aacc,transparent:true,opacity:0.13,side:THREE.BackSide}}));
+hm.scale.setScalar(0.44);scene.add(hm);
+let ueLabel=null;
+if(D.mono){{
+  ueLabel=mkLabel('E','#cce4ff');ueLabel.scale.set(0.42,0.42,1);scene.add(ueLabel);
+}}
+
+// Background Electrons — scattered, slow Brownian
+const bgEs=[];
+const initScR=D.scens.Left.r_e;
+for(let i=0;i<30;i++){{
+  const[x,y,z]=loosePt(3.8+Math.random()*3.2,1.4);
+  const sz=initScR*(0.65+Math.random()*0.7);
+  const mesh=mkSphere(sz,0x7799bb,x,y,z,0.42,0.14);
+  const eo={{mesh,vx:(Math.random()-.5)*.004,vy:(Math.random()-.5)*.004,vz:(Math.random()-.5)*.004,sz}};
+  if(D.mono){{
+    const sl=mkLabel('E','#aaccee');sl.scale.set(sz*2.8,sz*2.8,1);scene.add(sl);eo.label=sl;
+  }}
+  bgEs.push(eo);
+}}
+
+// Nucleons — created at max count, hidden extras fade in/out
+const nkns=[];
+function addGroup(maxN,r0,sig,initR3d,col,type,letter){{
+  const sc0=D.scens.Left;
+  for(let i=0;i<maxN;i++){{
+    const[x,y,z]=loosePt(r0,sig);
+    const szF=Math.max(0.55,Math.min(1.55,1+gauss()*0.18));
+    const initOp=(type==='g'&&i<sc0.n_g)||(type==='p'&&i<sc0.n_p)||(type==='s'&&i<sc0.n_s)?0.90:0.0;
+    const mesh=mkSphere(initR3d*szF,col,x,y,z,initOp,0.30);
+    const obj={{mesh,r0,type,szF,
+      curScale:initR3d*szF,targetScale:initR3d*szF,
+      curOpacity:initOp,targetOpacity:initOp,
+      vx:(Math.random()-.5)*.009,vy:(Math.random()-.5)*.009,vz:(Math.random()-.5)*.009}};
+    if(D.mono){{
+      const sl=mkLabel(letter,'#ffffff');
+      sl.scale.set(initR3d*szF*3.2,initR3d*szF*3.2,1);scene.add(sl);obj.label=sl;obj.labelSz=initR3d*szF*3.2;
+    }}
+    if(D.arrows&&initOp>0){{
+      const dv=new THREE.Vector3(1,0,0);
+      if(type==='g'){{
+        const arr=new THREE.ArrowHelper(dv,UE.clone(),1,col,0.14,0.07);
+        scene.add(arr);obj.arrow={{ref:arr,from:'ue',to:'n'}};
+      }}else if(type==='p'){{
+        const arr=new THREE.ArrowHelper(dv,new THREE.Vector3(x,y,z),1,col,0.14,0.07);
+        scene.add(arr);obj.arrow={{ref:arr,from:'n',to:'ue'}};
+      }}else{{
+        const a1=new THREE.ArrowHelper(dv,UE.clone(),1,col,0.12,0.06);
+        const a2=new THREE.ArrowHelper(dv,new THREE.Vector3(x,y,z),1,col,0.12,0.06);
+        scene.add(a1);scene.add(a2);
+        obj.arrowPair=[{{ref:a1,from:'ue',to:'n'}},{{ref:a2,from:'n',to:'ue'}}];
+      }}
+    }}
+    nkns.push(obj);
+  }}
+}}
+addGroup(D.maxNG,1.8,0.55,D.scens.Left.r_g,0xFFD700,'g','G');
+addGroup(D.maxNP,3.0,0.90,D.scens.Left.r_p,0x228B22,'p','P');
+addGroup(D.maxNS,4.2,1.20,D.scens.Left.r_s,0x8B0000,'s','S');
+
+// Scenario switch — update tween targets
+function switchScen(name){{
+  curScen=name;
+  document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-'+name).classList.add('active');
+  const sc=D.scens[name];
+  let gi=0,pi=0,si=0;
+  for(const n of nkns){{
+    if(n.type==='g'){{
+      n.targetScale=sc.r_g*n.szF;n.targetOpacity=gi<sc.n_g?0.90:0.0;gi++;
+    }}else if(n.type==='p'){{
+      n.targetScale=sc.r_p*n.szF;n.targetOpacity=pi<sc.n_p?0.90:0.0;pi++;
+    }}else{{
+      n.targetScale=sc.r_s*n.szF;n.targetOpacity=si<sc.n_s?0.90:0.0;si++;
+    }}
+  }}
+}}
+
+const _tmpV=new THREE.Vector3();
+let t=0;
+function animate(){{
+  requestAnimationFrame(animate);t+=0.004;
+  camera.position.x=8*Math.sin(t*.38);
+  camera.position.z=8*Math.cos(t*.38);
+  camera.position.y=1.5+1.1*Math.sin(t*.16);
+  camera.lookAt(0,0,0);
+
+  // UE label — front-facing surface
+  if(D.mono&&ueLabel){{
+    _tmpV.copy(camera.position).normalize().multiplyScalar(0.30);
+    ueLabel.position.set(_tmpV.x,_tmpV.y,_tmpV.z);
+  }}
+
+  // Background electron Brownian
+  for(const e of bgEs){{
+    e.vx+=(Math.random()-.5)*.0022;e.vy+=(Math.random()-.5)*.0022;e.vz+=(Math.random()-.5)*.0022;
+    e.vx*=.980;e.vy*=.980;e.vz*=.980;
+    e.mesh.position.x+=e.vx;e.mesh.position.y+=e.vy;e.mesh.position.z+=e.vz;
+    if(D.mono&&e.label){{
+      _tmpV.subVectors(camera.position,e.mesh.position).normalize().multiplyScalar(e.sz*0.85);
+      e.label.position.copy(e.mesh.position).add(_tmpV);
+    }}
+  }}
+
+  // Nucleon Brownian + tween
+  for(const n of nkns){{
+    // Lerp scale and opacity (morph)
+    n.curScale+=(n.targetScale-n.curScale)*LERP;
+    n.curOpacity+=(n.targetOpacity-n.curOpacity)*LERP;
+    n.mesh.scale.setScalar(n.curScale);
+    n.mesh.material.opacity=n.curOpacity;
+    n.mesh.visible=n.curOpacity>0.01;
+
+    if(!n.mesh.visible){{
+      if(D.mono&&n.label)n.label.visible=false;
+      if(D.arrows&&n.arrow)n.arrow.ref.visible=false;
+      if(D.arrows&&n.arrowPair){{n.arrowPair[0].ref.visible=false;n.arrowPair[1].ref.visible=false;}}
+      continue;
+    }}
+    if(D.mono&&n.label)n.label.visible=true;
+
+    // Brownian motion
+    n.vx+=(Math.random()-.5)*.0028;n.vy+=(Math.random()-.5)*.0028;n.vz+=(Math.random()-.5)*.0028;
+    const p=n.mesh.position;
+    const r=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+    const k=.010*(n.r0-r)/Math.max(r,.1);
+    n.vx+=p.x*k;n.vy+=p.y*k;n.vz+=p.z*k;
+    n.vx*=.974;n.vy*=.974;n.vz*=.974;
+    p.x+=n.vx;p.y+=n.vy;p.z+=n.vz;
+
+    // Monogram: offset toward camera onto sphere surface
+    if(D.mono&&n.label){{
+      _tmpV.subVectors(camera.position,p).normalize().multiplyScalar(n.curScale*0.85);
+      n.label.position.copy(p).add(_tmpV);
+      const ls=n.curScale*3.2;n.label.scale.set(ls,ls,1);
+    }}
+    // Arrows
+    if(D.arrows){{
+      const nv=new THREE.Vector3(p.x,p.y,p.z);
+      if(n.arrow){{
+        n.arrow.ref.visible=true;
+        const fr=n.arrow.from==='ue'?UE:nv,to=n.arrow.to==='ue'?UE:nv;
+        updateArrow(n.arrow.ref,fr,to);
+      }}
+      if(n.arrowPair){{
+        n.arrowPair[0].ref.visible=true;n.arrowPair[1].ref.visible=true;
+        updateArrow(n.arrowPair[0].ref,UE,nv);updateArrow(n.arrowPair[1].ref,nv,UE);
+      }}
+    }}
+  }}
+  renderer.render(scene,camera);
+}}
+animate();
+window.addEventListener('resize',()=>{{
+  const w=window.innerWidth;
+  renderer.setSize(w,H);camera.aspect=w/H;camera.updateProjectionMatrix();
+}});
+</script>
+</body></html>"""
+
+
+
 # ====================== UNIVERSE ======================
 st.markdown('<div id="universe"></div>', unsafe_allow_html=True)
 with st.expander("Universe Visualization", expanded=not _is_mobile):
@@ -1619,431 +2045,6 @@ fig_pw.update_layout(
     margin=dict(b=120, t=100),
 )
 fig_pw.add_annotation(**_FOOTER_ANNOTATION)
-
-# ---- Universe Visualization ----
-_NUKE_SHADES = {
-    "s": ["#8B0000", "#B22222", "#A52A2A", "#C00000", "#7B0000"],
-    "p": ["#228B22", "#32CD32", "#1A7A1A", "#3CB371", "#006400"],
-    "g": ["#FFD700", "#DAA520", "#FFC000", "#B8860B", "#9A7800"],
-}
-
-
-def _build_universe_fig(scen, label, height=420):
-    sfx_map = {"cCon (Left)": "c", "Center": "center", "dCon (Right)": "d"}
-    sfx = sfx_map[scen]
-    _dfpc = calculate_per_capita(scen).set_index("Class")
-    pw_e = float(_dfpc.loc["Electrons (throttled)", "Power ($)"])
-    pw_g = float(_dfpc.loc["GovNukes", "Power ($)"])
-    pw_p = float(_dfpc.loc["Providers", "Power ($)"])
-    pw_s = float(_dfpc.loc["SinSayers", "Power ($)"])
-    n_g = st.session_state.get(f"pop_g_{sfx}", 13)
-    n_p = st.session_state.get(f"pop_p_{sfx}", 40)
-    n_s = st.session_state.get(f"pop_s_{sfx}", 50)
-
-    log_lo = math.log10(min(pw_e, pw_g, pw_p, pw_s))
-    log_hi = math.log10(max(pw_e, pw_g, pw_p, pw_s))
-
-    def _sz(v):
-        t = (math.log10(max(v, 1)) - log_lo) / max(log_hi - log_lo, 1e-9)
-        return 8 + t * 24
-
-    def _ring(n, r):
-        return (
-            [r * math.cos(2 * math.pi * i / n) for i in range(n)],
-            [r * math.sin(2 * math.pi * i / n) for i in range(n)],
-        )
-
-    bg = "#0d1b2a"
-    fig = go.Figure()
-
-    # Faint orbital rings
-    for r in [0.5, 1.4, 2.4, 3.4]:
-        th = [2 * math.pi * i / 120 for i in range(121)]
-        fig.add_trace(go.Scatter(
-            x=[r * math.cos(t) for t in th], y=[r * math.sin(t) for t in th],
-            mode="lines", line=dict(color="rgba(255,255,255,0.07)", width=1),
-            hoverinfo="skip", showlegend=False,
-        ))
-
-    # SinSayers — outermost ring, 5 cycling shades
-    sx, sy = _ring(n_s, 3.4)
-    fig.add_trace(go.Scatter(
-        x=sx, y=sy, mode="markers",
-        marker=dict(
-            size=_sz(pw_s),
-            color=[_NUKE_SHADES["s"][i % 5] for i in range(n_s)],
-            opacity=0.9, line=dict(color="white", width=1),
-        ),
-        hovertemplate=f"SinSayer<br>${pw_s/1e6:.1f}M/cap<extra></extra>",
-        showlegend=False,
-    ))
-
-    # Providers — 5 cycling shades
-    px_v, py_v = _ring(n_p, 2.4)
-    fig.add_trace(go.Scatter(
-        x=px_v, y=py_v, mode="markers",
-        marker=dict(
-            size=_sz(pw_p),
-            color=[_NUKE_SHADES["p"][i % 5] for i in range(n_p)],
-            opacity=0.9, line=dict(color="white", width=1),
-        ),
-        hovertemplate=f"Provider<br>${pw_p/1e6:.1f}M/cap<extra></extra>",
-        showlegend=False,
-    ))
-
-    # GovNukes — 5 cycling shades
-    gx, gy = _ring(n_g, 1.4)
-    fig.add_trace(go.Scatter(
-        x=gx, y=gy, mode="markers",
-        marker=dict(
-            size=_sz(pw_g),
-            color=[_NUKE_SHADES["g"][i % 5] for i in range(n_g)],
-            opacity=0.9, line=dict(color="white", width=1),
-        ),
-        hovertemplate=f"GovNuke<br>${pw_g/1e6:.0f}M/cap<extra></extra>",
-        showlegend=False,
-    ))
-
-    # Background electrons
-    ex, ey = _ring(5, 0.5)
-    fig.add_trace(go.Scatter(
-        x=ex, y=ey, mode="markers",
-        marker=dict(size=_sz(pw_e), color="#3355aa", opacity=0.75),
-        hovertemplate=f"Electron<br>${pw_e:,.0f}/cap<extra></extra>",
-        showlegend=False,
-    ))
-
-    # Nemo — the focal Electron
-    fig.add_trace(go.Scatter(
-        x=[0], y=[0], mode="markers+text",
-        marker=dict(size=20, color="#00008B", line=dict(color="white", width=2)),
-        text=["E"], textfont=dict(color="white", size=9),
-        textposition="middle center",
-        hovertemplate=f"Electron (YOU)<br>${pw_e:,.0f}/cap<extra></extra>",
-        showlegend=False,
-    ))
-
-    # Title + subtitle annotations in top margin
-    for ann_y, ann_text, ann_color, ann_size in [
-        (1.28, f"<b>{label}</b>", "white", 14),
-        (1.15, "Bubble Size = $$$ Power", "#aaaaaa", 9),
-        (1.06, "⚠ WARNING: Nucleons 1,000s–10,000s× Larger IRL", "#ffaa44", 9),
-    ]:
-        fig.add_annotation(
-            x=0.5, y=ann_y, xref="paper", yref="paper",
-            text=ann_text, showarrow=False,
-            font=dict(color=ann_color, size=ann_size),
-            xanchor="center", yanchor="bottom",
-        )
-
-    # Legend below chart
-    for i, (cls, pwr, clr) in enumerate([
-        ("Electron", f"${pw_e:,.0f}", "#aabbff"),
-        (f"GovNuke ×{n_g}", f"${pw_g/1e6:.0f}M", "#FFD700"),
-        (f"Provider ×{n_p}", f"${pw_p/1e6:.1f}M", "#66cc66"),
-        (f"SinSayer ×{n_s}", f"${pw_s/1e6:.1f}M", "#dd5555"),
-    ]):
-        fig.add_annotation(
-            x=0.13 + i * 0.25, y=-0.02,
-            xref="paper", yref="paper",
-            text=f"<b>{cls}</b><br>{pwr}/cap",
-            showarrow=False, font=dict(color=clr, size=11),
-            xanchor="center", yanchor="top", align="center",
-        )
-
-    fig.update_layout(
-        height=height, showlegend=False,
-        plot_bgcolor=bg, paper_bgcolor=bg,
-        xaxis=dict(range=[-4.2, 4.2], showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(range=[-4.2, 4.2], showgrid=False, zeroline=False,
-                   showticklabels=False, scaleanchor="x", scaleratio=1),
-        margin=dict(t=95, b=105, l=10, r=10),
-        title=dict(text=""),
-    )
-    return fig
-
-
-def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
-    sfx_map = {"cCon (Left)": "c", "Center": "center", "dCon (Right)": "d"}
-    scen_labels = [("Left", "cCon (Left)"), ("Center", "Center"), ("Right", "dCon (Right)")]
-
-    scens = {}
-    for lbl, scen_key in scen_labels:
-        sfx = sfx_map[scen_key]
-        _dfpc = calculate_per_capita(scen_key).set_index("Class")
-        _pw_e = float(_dfpc.loc["Electrons (throttled)", "Power ($)"])
-        _pw_g = float(_dfpc.loc["GovNukes", "Power ($)"])
-        _pw_p = float(_dfpc.loc["Providers", "Power ($)"])
-        _pw_s = float(_dfpc.loc["SinSayers", "Power ($)"])
-        _lo = math.log10(min(_pw_e, _pw_g, _pw_p, _pw_s))
-        _hi = math.log10(max(_pw_e, _pw_g, _pw_p, _pw_s))
-        def _sz(v, lo=_lo, hi=_hi):
-            t = (math.log10(max(v, 1)) - lo) / max(hi - lo, 1e-9)
-            return round(0.06 + t * 0.19, 4)
-        scens[lbl] = {
-            "r_e": _sz(_pw_e), "r_g": _sz(_pw_g), "r_p": _sz(_pw_p), "r_s": _sz(_pw_s),
-            "n_g": st.session_state.get(f"pop_g_{sfx}", 13),
-            "n_p": st.session_state.get(f"pop_p_{sfx}", 40),
-            "n_s": st.session_state.get(f"pop_s_{sfx}", 50),
-        }
-
-    max_n_g = max(v["n_g"] for v in scens.values())
-    max_n_p = max(v["n_p"] for v in scens.values())
-    max_n_s = max(v["n_s"] for v in scens.values())
-
-    d = json.dumps({
-        "scens": scens,
-        "maxNG": max_n_g, "maxNP": max_n_p, "maxNS": max_n_s,
-        "arrows": show_arrows, "mono": show_mono,
-    })
-    H = height - 8
-
-    return f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8">
-<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{background:#0d1b2a;overflow:hidden;font-family:sans-serif}}
-canvas{{display:block}}
-#ov{{position:absolute;top:0;left:0;width:100%;pointer-events:none}}
-#sb{{text-align:center;color:#888;font-size:9px;padding:4px 0 0}}
-#lg{{position:absolute;bottom:8px;left:10px;color:#ccc;font-size:10px;line-height:1.9;pointer-events:none}}
-#btns{{position:absolute;top:6px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto}}
-.sbtn{{background:#1e3a5f;color:#aaccee;border:1px solid #335577;border-radius:4px;
-       padding:3px 12px;font-size:12px;cursor:pointer;font-weight:600}}
-.sbtn.active{{background:#2255aa;color:#ffffff;border-color:#4477cc}}
-</style>
-</head><body>
-<div id="ov">
-  <div id="btns">
-    <button class="sbtn active" id="btn-Left" onclick="switchScen('Left')">Left</button>
-    <button class="sbtn" id="btn-Center" onclick="switchScen('Center')">Center</button>
-    <button class="sbtn" id="btn-Right" onclick="switchScen('Right')">Right</button>
-  </div>
-  <div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons 1,000s&#8211;10,000s&times; Larger IRL</div>
-</div>
-<div id="lg">
-  <span style="color:#aaccee">&#9679; Electrons</span><br>
-  <span style="color:#FFD700">&#9679; GovNukes</span><br>
-  <span style="color:#66cc66">&#9679; Providers</span><br>
-  <span style="color:#cc4444">&#9679; SinSayers</span>
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-const D={d};
-const W=window.innerWidth,H={H};
-let curScen='Left';
-const LERP=0.042;
-
-const renderer=new THREE.WebGLRenderer({{antialias:true}});
-renderer.setSize(W,H);renderer.setPixelRatio(window.devicePixelRatio||1);
-document.body.appendChild(renderer.domElement);
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x0d1b2a);
-scene.fog=new THREE.FogExp2(0x0d1b2a,0.040);
-const camera=new THREE.PerspectiveCamera(55,W/H,0.01,100);
-camera.position.set(0,1.5,8);
-scene.add(new THREE.AmbientLight(0x334466,2.5));
-const ptLight=new THREE.PointLight(0x88aaff,3,10);scene.add(ptLight);
-const dirLight=new THREE.DirectionalLight(0xffffff,0.4);dirLight.position.set(4,6,4);scene.add(dirLight);
-
-function gauss(){{
-  let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();
-  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
-}}
-function loosePt(r0,sig){{
-  const th=2*Math.PI*Math.random(),ph=Math.acos(2*Math.random()-1);
-  const r=Math.max(0.3,r0+gauss()*sig);
-  return[r*Math.sin(ph)*Math.cos(th),r*Math.sin(ph)*Math.sin(th),r*Math.cos(ph)];
-}}
-// Unit-sphere + scale so we can tween size
-function mkSphere(initR,color,x,y,z,opacity,emInt){{
-  const m=new THREE.Mesh(
-    new THREE.SphereGeometry(1,10,8),
-    new THREE.MeshPhongMaterial({{color,emissive:color,emissiveIntensity:emInt||0.25,
-      transparent:true,opacity,shininess:55}})
-  );
-  m.scale.setScalar(initR);m.position.set(x,y,z);scene.add(m);return m;
-}}
-function mkLabel(letter,col){{
-  const cv=document.createElement('canvas');cv.width=cv.height=64;
-  const cx=cv.getContext('2d');
-  cx.fillStyle=col;cx.font='bold 42px sans-serif';
-  cx.textAlign='center';cx.textBaseline='middle';cx.fillText(letter,32,32);
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({{map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}}));
-  return sp;
-}}
-function updateArrow(arr,from,to){{
-  const dir=new THREE.Vector3().subVectors(to,from);
-  const len=dir.length();if(len<0.15)return;
-  arr.position.copy(from);arr.setDirection(dir.normalize());
-  arr.setLength(len,Math.min(0.16,len*0.22),Math.min(0.08,len*0.11));
-}}
-
-const UE=new THREE.Vector3(0,0,0);
-
-// UE — focal Electron, stays fixed
-const ueMesh=mkSphere(0.22,0x99bbdd,0,0,0,1.0,0.85);
-const hm=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),
-  new THREE.MeshPhongMaterial({{color:0x88aacc,transparent:true,opacity:0.13,side:THREE.BackSide}}));
-hm.scale.setScalar(0.44);scene.add(hm);
-let ueLabel=null;
-if(D.mono){{
-  ueLabel=mkLabel('E','#cce4ff');ueLabel.scale.set(0.42,0.42,1);scene.add(ueLabel);
-}}
-
-// Background Electrons — scattered, slow Brownian
-const bgEs=[];
-const initScR=D.scens.Left.r_e;
-for(let i=0;i<30;i++){{
-  const[x,y,z]=loosePt(3.8+Math.random()*3.2,1.4);
-  const sz=initScR*(0.65+Math.random()*0.7);
-  const mesh=mkSphere(sz,0x7799bb,x,y,z,0.42,0.14);
-  const eo={{mesh,vx:(Math.random()-.5)*.004,vy:(Math.random()-.5)*.004,vz:(Math.random()-.5)*.004,sz}};
-  if(D.mono){{
-    const sl=mkLabel('E','#aaccee');sl.scale.set(sz*2.8,sz*2.8,1);scene.add(sl);eo.label=sl;
-  }}
-  bgEs.push(eo);
-}}
-
-// Nucleons — created at max count, hidden extras fade in/out
-const nkns=[];
-function addGroup(maxN,r0,sig,initR3d,col,type,letter){{
-  const sc0=D.scens.Left;
-  for(let i=0;i<maxN;i++){{
-    const[x,y,z]=loosePt(r0,sig);
-    const szF=Math.max(0.55,Math.min(1.55,1+gauss()*0.18));
-    const initOp=(type==='g'&&i<sc0.n_g)||(type==='p'&&i<sc0.n_p)||(type==='s'&&i<sc0.n_s)?0.90:0.0;
-    const mesh=mkSphere(initR3d*szF,col,x,y,z,initOp,0.30);
-    const obj={{mesh,r0,type,szF,
-      curScale:initR3d*szF,targetScale:initR3d*szF,
-      curOpacity:initOp,targetOpacity:initOp,
-      vx:(Math.random()-.5)*.009,vy:(Math.random()-.5)*.009,vz:(Math.random()-.5)*.009}};
-    if(D.mono){{
-      const sl=mkLabel(letter,'#ffffff');
-      sl.scale.set(initR3d*szF*3.2,initR3d*szF*3.2,1);scene.add(sl);obj.label=sl;obj.labelSz=initR3d*szF*3.2;
-    }}
-    if(D.arrows&&initOp>0){{
-      const dv=new THREE.Vector3(1,0,0);
-      if(type==='g'){{
-        const arr=new THREE.ArrowHelper(dv,UE.clone(),1,col,0.14,0.07);
-        scene.add(arr);obj.arrow={{ref:arr,from:'ue',to:'n'}};
-      }}else if(type==='p'){{
-        const arr=new THREE.ArrowHelper(dv,new THREE.Vector3(x,y,z),1,col,0.14,0.07);
-        scene.add(arr);obj.arrow={{ref:arr,from:'n',to:'ue'}};
-      }}else{{
-        const a1=new THREE.ArrowHelper(dv,UE.clone(),1,col,0.12,0.06);
-        const a2=new THREE.ArrowHelper(dv,new THREE.Vector3(x,y,z),1,col,0.12,0.06);
-        scene.add(a1);scene.add(a2);
-        obj.arrowPair=[{{ref:a1,from:'ue',to:'n'}},{{ref:a2,from:'n',to:'ue'}}];
-      }}
-    }}
-    nkns.push(obj);
-  }}
-}}
-addGroup(D.maxNG,1.8,0.55,D.scens.Left.r_g,0xFFD700,'g','G');
-addGroup(D.maxNP,3.0,0.90,D.scens.Left.r_p,0x228B22,'p','P');
-addGroup(D.maxNS,4.2,1.20,D.scens.Left.r_s,0x8B0000,'s','S');
-
-// Scenario switch — update tween targets
-function switchScen(name){{
-  curScen=name;
-  document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('btn-'+name).classList.add('active');
-  const sc=D.scens[name];
-  let gi=0,pi=0,si=0;
-  for(const n of nkns){{
-    if(n.type==='g'){{
-      n.targetScale=sc.r_g*n.szF;n.targetOpacity=gi<sc.n_g?0.90:0.0;gi++;
-    }}else if(n.type==='p'){{
-      n.targetScale=sc.r_p*n.szF;n.targetOpacity=pi<sc.n_p?0.90:0.0;pi++;
-    }}else{{
-      n.targetScale=sc.r_s*n.szF;n.targetOpacity=si<sc.n_s?0.90:0.0;si++;
-    }}
-  }}
-}}
-
-const _tmpV=new THREE.Vector3();
-let t=0;
-function animate(){{
-  requestAnimationFrame(animate);t+=0.004;
-  camera.position.x=8*Math.sin(t*.38);
-  camera.position.z=8*Math.cos(t*.38);
-  camera.position.y=1.5+1.1*Math.sin(t*.16);
-  camera.lookAt(0,0,0);
-
-  // UE label — front-facing surface
-  if(D.mono&&ueLabel){{
-    _tmpV.copy(camera.position).normalize().multiplyScalar(0.30);
-    ueLabel.position.set(_tmpV.x,_tmpV.y,_tmpV.z);
-  }}
-
-  // Background electron Brownian
-  for(const e of bgEs){{
-    e.vx+=(Math.random()-.5)*.0022;e.vy+=(Math.random()-.5)*.0022;e.vz+=(Math.random()-.5)*.0022;
-    e.vx*=.980;e.vy*=.980;e.vz*=.980;
-    e.mesh.position.x+=e.vx;e.mesh.position.y+=e.vy;e.mesh.position.z+=e.vz;
-    if(D.mono&&e.label){{
-      _tmpV.subVectors(camera.position,e.mesh.position).normalize().multiplyScalar(e.sz*0.85);
-      e.label.position.copy(e.mesh.position).add(_tmpV);
-    }}
-  }}
-
-  // Nucleon Brownian + tween
-  for(const n of nkns){{
-    // Lerp scale and opacity (morph)
-    n.curScale+=(n.targetScale-n.curScale)*LERP;
-    n.curOpacity+=(n.targetOpacity-n.curOpacity)*LERP;
-    n.mesh.scale.setScalar(n.curScale);
-    n.mesh.material.opacity=n.curOpacity;
-    n.mesh.visible=n.curOpacity>0.01;
-
-    if(!n.mesh.visible){{
-      if(D.mono&&n.label)n.label.visible=false;
-      if(D.arrows&&n.arrow)n.arrow.ref.visible=false;
-      if(D.arrows&&n.arrowPair){{n.arrowPair[0].ref.visible=false;n.arrowPair[1].ref.visible=false;}}
-      continue;
-    }}
-    if(D.mono&&n.label)n.label.visible=true;
-
-    // Brownian motion
-    n.vx+=(Math.random()-.5)*.0028;n.vy+=(Math.random()-.5)*.0028;n.vz+=(Math.random()-.5)*.0028;
-    const p=n.mesh.position;
-    const r=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
-    const k=.010*(n.r0-r)/Math.max(r,.1);
-    n.vx+=p.x*k;n.vy+=p.y*k;n.vz+=p.z*k;
-    n.vx*=.974;n.vy*=.974;n.vz*=.974;
-    p.x+=n.vx;p.y+=n.vy;p.z+=n.vz;
-
-    // Monogram: offset toward camera onto sphere surface
-    if(D.mono&&n.label){{
-      _tmpV.subVectors(camera.position,p).normalize().multiplyScalar(n.curScale*0.85);
-      n.label.position.copy(p).add(_tmpV);
-      const ls=n.curScale*3.2;n.label.scale.set(ls,ls,1);
-    }}
-    // Arrows
-    if(D.arrows){{
-      const nv=new THREE.Vector3(p.x,p.y,p.z);
-      if(n.arrow){{
-        n.arrow.ref.visible=true;
-        const fr=n.arrow.from==='ue'?UE:nv,to=n.arrow.to==='ue'?UE:nv;
-        updateArrow(n.arrow.ref,fr,to);
-      }}
-      if(n.arrowPair){{
-        n.arrowPair[0].ref.visible=true;n.arrowPair[1].ref.visible=true;
-        updateArrow(n.arrowPair[0].ref,UE,nv);updateArrow(n.arrowPair[1].ref,nv,UE);
-      }}
-    }}
-  }}
-  renderer.render(scene,camera);
-}}
-animate();
-window.addEventListener('resize',()=>{{
-  const w=window.innerWidth;
-  renderer.setSize(w,H);camera.aspect=w/H;camera.updateProjectionMatrix();
-}});
-</script>
-</body></html>"""
-
 
 # ---- Render sections ----
 st.markdown('<div id="brainpower"></div>', unsafe_allow_html=True)
