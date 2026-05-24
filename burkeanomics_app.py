@@ -732,6 +732,8 @@ st.markdown(
 )
 st.markdown(
     "<div style='display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 14px 0;font-size:14px;font-weight:600;justify-content:center;'>"
+    "<a href='#universe' style='color:#1155cc;text-decoration:none;'>Universe</a>"
+    "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
     "<a href='#throttles' style='color:#1155cc;text-decoration:none;'>Throttles</a>"
     "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
     "<a href='#brainpower' style='color:#1155cc;text-decoration:none;'>BrainPower</a>"
@@ -742,12 +744,42 @@ st.markdown(
     "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
     "<a href='#population' style='color:#1155cc;text-decoration:none;'>Populations</a>"
     "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
-    "<a href='#universe' style='color:#1155cc;text-decoration:none;'>Universe</a>"
-    "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
     "<a href='#tables' style='color:#1155cc;text-decoration:none;'>Tables</a>"
     "</div>",
     unsafe_allow_html=True,
 )
+
+# ====================== UNIVERSE ======================
+st.markdown('<div id="universe"></div>', unsafe_allow_html=True)
+with st.expander("Universe Visualization", expanded=not _is_mobile):
+    _utab3d, _utab3, _utab1 = st.tabs(["🌌 3D", "🔭 3-Panel", "🎯 Single View"])
+    with _utab3d:
+        _3d_ck1, _3d_ck2 = st.columns(2)
+        with _3d_ck1:
+            _3d_arrows = st.checkbox("Arrows", key="uni_3d_arrows")
+        with _3d_ck2:
+            _3d_mono = st.checkbox("Monograms", key="uni_3d_mono")
+        _components.html(
+            _build_universe_3d(show_arrows=_3d_arrows, show_mono=_3d_mono, height=580),
+            height=580,
+            scrolling=False,
+        )
+    with _utab3:
+        _uni_cols = st.columns(3)
+        for _ucol, (scen, label) in zip(_uni_cols, SCENARIOS):
+            with _ucol:
+                st.plotly_chart(_build_universe_fig(scen, label), use_container_width=True)
+    with _utab1:
+        _uni_sel = st.radio(
+            "Scenario", ["Left", "Center", "Right"],
+            horizontal=True, key="uni_single_sel",
+            label_visibility="collapsed",
+        )
+        _uni_scen_key = {"Left": "cCon (Left)", "Center": "Center", "Right": "dCon (Right)"}
+        st.plotly_chart(
+            _build_universe_fig(_uni_scen_key[_uni_sel], _uni_sel, height=580),
+            use_container_width=True,
+        )
 
 st.markdown('<div id="throttles"></div>', unsafe_allow_html=True)
 with st.expander("Electron Throttles", expanded=not _is_mobile):
@@ -1731,30 +1763,37 @@ def _build_universe_fig(scen, label, height=420):
     return fig
 
 
-def _build_universe_3d(scen, label, show_arrows=False, show_mono=False, height=540):
+def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
     sfx_map = {"cCon (Left)": "c", "Center": "center", "dCon (Right)": "d"}
-    sfx = sfx_map[scen]
-    _dfpc = calculate_per_capita(scen).set_index("Class")
-    pw_e = float(_dfpc.loc["Electrons (throttled)", "Power ($)"])
-    pw_g = float(_dfpc.loc["GovNukes", "Power ($)"])
-    pw_p = float(_dfpc.loc["Providers", "Power ($)"])
-    pw_s = float(_dfpc.loc["SinSayers", "Power ($)"])
-    n_g = st.session_state.get(f"pop_g_{sfx}", 13)
-    n_p = st.session_state.get(f"pop_p_{sfx}", 40)
-    n_s = st.session_state.get(f"pop_s_{sfx}", 50)
+    scen_labels = [("Left", "cCon (Left)"), ("Center", "Center"), ("Right", "dCon (Right)")]
 
-    log_lo = math.log10(min(pw_e, pw_g, pw_p, pw_s))
-    log_hi = math.log10(max(pw_e, pw_g, pw_p, pw_s))
+    scens = {}
+    for lbl, scen_key in scen_labels:
+        sfx = sfx_map[scen_key]
+        _dfpc = calculate_per_capita(scen_key).set_index("Class")
+        _pw_e = float(_dfpc.loc["Electrons (throttled)", "Power ($)"])
+        _pw_g = float(_dfpc.loc["GovNukes", "Power ($)"])
+        _pw_p = float(_dfpc.loc["Providers", "Power ($)"])
+        _pw_s = float(_dfpc.loc["SinSayers", "Power ($)"])
+        _lo = math.log10(min(_pw_e, _pw_g, _pw_p, _pw_s))
+        _hi = math.log10(max(_pw_e, _pw_g, _pw_p, _pw_s))
+        def _sz(v, lo=_lo, hi=_hi):
+            t = (math.log10(max(v, 1)) - lo) / max(hi - lo, 1e-9)
+            return round(0.06 + t * 0.19, 4)
+        scens[lbl] = {
+            "r_e": _sz(_pw_e), "r_g": _sz(_pw_g), "r_p": _sz(_pw_p), "r_s": _sz(_pw_s),
+            "n_g": st.session_state.get(f"pop_g_{sfx}", 13),
+            "n_p": st.session_state.get(f"pop_p_{sfx}", 40),
+            "n_s": st.session_state.get(f"pop_s_{sfx}", 50),
+        }
 
-    def sz3d(v):
-        t = (math.log10(max(v, 1)) - log_lo) / max(log_hi - log_lo, 1e-9)
-        return round(0.06 + t * 0.19, 4)
+    max_n_g = max(v["n_g"] for v in scens.values())
+    max_n_p = max(v["n_p"] for v in scens.values())
+    max_n_s = max(v["n_s"] for v in scens.values())
 
     d = json.dumps({
-        "r_e": sz3d(pw_e), "r_g": sz3d(pw_g),
-        "r_p": sz3d(pw_p), "r_s": sz3d(pw_s),
-        "pw_e": pw_e, "pw_g": pw_g, "pw_p": pw_p, "pw_s": pw_s,
-        "n_g": n_g, "n_p": n_p, "n_s": n_s,
+        "scens": scens,
+        "maxNG": max_n_g, "maxNP": max_n_p, "maxNS": max_n_s,
         "arrows": show_arrows, "mono": show_mono,
     })
     H = height - 8
@@ -1766,124 +1805,124 @@ def _build_universe_3d(scen, label, show_arrows=False, show_mono=False, height=5
 body{{background:#0d1b2a;overflow:hidden;font-family:sans-serif}}
 canvas{{display:block}}
 #ov{{position:absolute;top:0;left:0;width:100%;pointer-events:none}}
-#ti{{text-align:center;color:#fff;font-size:13px;font-weight:bold;padding:8px 0 0;text-shadow:0 0 10px #88aadd}}
-#sb{{text-align:center;color:#888;font-size:9px;padding:2px 0 0}}
-#lg{{position:absolute;bottom:8px;left:10px;color:#ccc;font-size:10px;line-height:1.9}}
+#sb{{text-align:center;color:#888;font-size:9px;padding:4px 0 0}}
+#lg{{position:absolute;bottom:8px;left:10px;color:#ccc;font-size:10px;line-height:1.9;pointer-events:none}}
+#btns{{position:absolute;top:6px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto}}
+.sbtn{{background:#1e3a5f;color:#aaccee;border:1px solid #335577;border-radius:4px;
+       padding:3px 12px;font-size:12px;cursor:pointer;font-weight:600}}
+.sbtn.active{{background:#2255aa;color:#ffffff;border-color:#4477cc}}
 </style>
 </head><body>
 <div id="ov">
-  <div id="ti">{label}</div>
+  <div id="btns">
+    <button class="sbtn active" id="btn-Left" onclick="switchScen('Left')">Left</button>
+    <button class="sbtn" id="btn-Center" onclick="switchScen('Center')">Center</button>
+    <button class="sbtn" id="btn-Right" onclick="switchScen('Right')">Right</button>
+  </div>
   <div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons 1,000s&#8211;10,000s&times; Larger IRL</div>
 </div>
 <div id="lg">
   <span style="color:#aaccee">&#9679; Electrons</span><br>
-  <span style="color:#FFD700">&#9679; GovNukes &times;{n_g}</span><br>
-  <span style="color:#66cc66">&#9679; Providers &times;{n_p}</span><br>
-  <span style="color:#cc4444">&#9679; SinSayers &times;{n_s}</span>
+  <span style="color:#FFD700">&#9679; GovNukes</span><br>
+  <span style="color:#66cc66">&#9679; Providers</span><br>
+  <span style="color:#cc4444">&#9679; SinSayers</span>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const D={d};
 const W=window.innerWidth,H={H};
+let curScen='Left';
+const LERP=0.042;
+
 const renderer=new THREE.WebGLRenderer({{antialias:true}});
-renderer.setSize(W,H);
-renderer.setPixelRatio(window.devicePixelRatio||1);
+renderer.setSize(W,H);renderer.setPixelRatio(window.devicePixelRatio||1);
 document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x0d1b2a);
-scene.fog=new THREE.FogExp2(0x0d1b2a,0.042);
+scene.fog=new THREE.FogExp2(0x0d1b2a,0.040);
 const camera=new THREE.PerspectiveCamera(55,W/H,0.01,100);
 camera.position.set(0,1.5,8);
 scene.add(new THREE.AmbientLight(0x334466,2.5));
-const ptLight=new THREE.PointLight(0x88aaff,3,10);
-scene.add(ptLight);
-const dirLight=new THREE.DirectionalLight(0xffffff,0.4);
-dirLight.position.set(4,6,4);
-scene.add(dirLight);
+const ptLight=new THREE.PointLight(0x88aaff,3,10);scene.add(ptLight);
+const dirLight=new THREE.DirectionalLight(0xffffff,0.4);dirLight.position.set(4,6,4);scene.add(dirLight);
 
-// Box-Muller Gaussian
 function gauss(){{
-  let u=0,v=0;
-  while(!u)u=Math.random();
-  while(!v)v=Math.random();
+  let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();
   return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
 }}
-
-// Random point with Gaussian radius around r0
 function loosePt(r0,sig){{
   const th=2*Math.PI*Math.random(),ph=Math.acos(2*Math.random()-1);
   const r=Math.max(0.3,r0+gauss()*sig);
   return[r*Math.sin(ph)*Math.cos(th),r*Math.sin(ph)*Math.sin(th),r*Math.cos(ph)];
 }}
-
-function mkSphere(r,color,x,y,z,opacity,emInt){{
+// Unit-sphere + scale so we can tween size
+function mkSphere(initR,color,x,y,z,opacity,emInt){{
   const m=new THREE.Mesh(
-    new THREE.SphereGeometry(r,10,8),
+    new THREE.SphereGeometry(1,10,8),
     new THREE.MeshPhongMaterial({{color,emissive:color,emissiveIntensity:emInt||0.25,
-      transparent:opacity<1,opacity,shininess:55}})
+      transparent:true,opacity,shininess:55}})
   );
-  m.position.set(x,y,z);scene.add(m);return m;
+  m.scale.setScalar(initR);m.position.set(x,y,z);scene.add(m);return m;
 }}
-
 function mkLabel(letter,col){{
   const cv=document.createElement('canvas');cv.width=cv.height=64;
   const cx=cv.getContext('2d');
-  cx.fillStyle=col;cx.font='bold 40px sans-serif';
-  cx.textAlign='center';cx.textBaseline='middle';
-  cx.fillText(letter,32,32);
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({{map:new THREE.CanvasTexture(cv),transparent:true}}));
+  cx.fillStyle=col;cx.font='bold 42px sans-serif';
+  cx.textAlign='center';cx.textBaseline='middle';cx.fillText(letter,32,32);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({{map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}}));
   return sp;
 }}
-
 function updateArrow(arr,from,to){{
   const dir=new THREE.Vector3().subVectors(to,from);
-  const len=dir.length();
-  if(len<0.15)return;
-  arr.position.copy(from);
-  arr.setDirection(dir.normalize());
+  const len=dir.length();if(len<0.15)return;
+  arr.position.copy(from);arr.setDirection(dir.normalize());
   arr.setLength(len,Math.min(0.16,len*0.22),Math.min(0.08,len*0.11));
 }}
 
 const UE=new THREE.Vector3(0,0,0);
 
-// UE — silver-blue focal Electron, fixed
-mkSphere(0.22,0x99bbdd,0,0,0,1.0,0.85);
-const hm=new THREE.Mesh(new THREE.SphereGeometry(0.44,10,8),
+// UE — focal Electron, stays fixed
+const ueMesh=mkSphere(0.22,0x99bbdd,0,0,0,1.0,0.85);
+const hm=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),
   new THREE.MeshPhongMaterial({{color:0x88aacc,transparent:true,opacity:0.13,side:THREE.BackSide}}));
-scene.add(hm);
+hm.scale.setScalar(0.44);scene.add(hm);
+let ueLabel=null;
 if(D.mono){{
-  const ul=mkLabel('UE','#cce4ff');ul.position.set(0,0.35,0);ul.scale.set(0.42,0.42,1);scene.add(ul);
+  ueLabel=mkLabel('E','#cce4ff');ueLabel.scale.set(0.42,0.42,1);scene.add(ueLabel);
 }}
 
-// Background Electrons — silver-blue, scattered, Brownian
+// Background Electrons — scattered, slow Brownian
 const bgEs=[];
+const initScR=D.scens.Left.r_e;
 for(let i=0;i<30;i++){{
   const[x,y,z]=loosePt(3.8+Math.random()*3.2,1.4);
-  const sz=D.r_e*(0.65+Math.random()*0.7);
+  const sz=initScR*(0.65+Math.random()*0.7);
   const mesh=mkSphere(sz,0x7799bb,x,y,z,0.42,0.14);
-  const eo={{mesh,vx:(Math.random()-.5)*.004,vy:(Math.random()-.5)*.004,vz:(Math.random()-.5)*.004}};
+  const eo={{mesh,vx:(Math.random()-.5)*.004,vy:(Math.random()-.5)*.004,vz:(Math.random()-.5)*.004,sz}};
   if(D.mono){{
-    const sl=mkLabel('E','#aaccee');sl.position.copy(mesh.position);
-    sl.scale.set(sz*2.8,sz*2.8,1);scene.add(sl);eo.label=sl;
+    const sl=mkLabel('E','#aaccee');sl.scale.set(sz*2.8,sz*2.8,1);scene.add(sl);eo.label=sl;
   }}
   bgEs.push(eo);
 }}
 
-// Nucleons with Brownian + loose orbital spring
+// Nucleons — created at max count, hidden extras fade in/out
 const nkns=[];
-function addGroup(n,r0,sig,r3d,col,type,letter){{
-  for(let i=0;i<n;i++){{
+function addGroup(maxN,r0,sig,initR3d,col,type,letter){{
+  const sc0=D.scens.Left;
+  for(let i=0;i<maxN;i++){{
     const[x,y,z]=loosePt(r0,sig);
-    // 3-sigma normal size variation
     const szF=Math.max(0.55,Math.min(1.55,1+gauss()*0.18));
-    const mesh=mkSphere(r3d*szF,col,x,y,z,0.90,0.30);
-    const obj={{mesh,r0,type,
+    const initOp=(type==='g'&&i<sc0.n_g)||(type==='p'&&i<sc0.n_p)||(type==='s'&&i<sc0.n_s)?0.90:0.0;
+    const mesh=mkSphere(initR3d*szF,col,x,y,z,initOp,0.30);
+    const obj={{mesh,r0,type,szF,
+      curScale:initR3d*szF,targetScale:initR3d*szF,
+      curOpacity:initOp,targetOpacity:initOp,
       vx:(Math.random()-.5)*.009,vy:(Math.random()-.5)*.009,vz:(Math.random()-.5)*.009}};
     if(D.mono){{
       const sl=mkLabel(letter,'#ffffff');
-      sl.scale.set(r3d*szF*3.0,r3d*szF*3.0,1);scene.add(sl);obj.label=sl;
+      sl.scale.set(initR3d*szF*3.2,initR3d*szF*3.2,1);scene.add(sl);obj.label=sl;obj.labelSz=initR3d*szF*3.2;
     }}
-    if(D.arrows){{
+    if(D.arrows&&initOp>0){{
       const dv=new THREE.Vector3(1,0,0);
       if(type==='g'){{
         const arr=new THREE.ArrowHelper(dv,UE.clone(),1,col,0.14,0.07);
@@ -1901,29 +1940,72 @@ function addGroup(n,r0,sig,r3d,col,type,letter){{
     nkns.push(obj);
   }}
 }}
-// Loose spread: sig = orbital band width (σ in 3D-shell distance)
-addGroup(D.n_g,1.8,0.55,D.r_g,0xFFD700,'g','G');
-addGroup(D.n_p,3.0,0.90,D.r_p,0x228B22,'p','P');
-addGroup(D.n_s,4.2,1.20,D.r_s,0x8B0000,'s','S');
+addGroup(D.maxNG,1.8,0.55,D.scens.Left.r_g,0xFFD700,'g','G');
+addGroup(D.maxNP,3.0,0.90,D.scens.Left.r_p,0x228B22,'p','P');
+addGroup(D.maxNS,4.2,1.20,D.scens.Left.r_s,0x8B0000,'s','S');
 
+// Scenario switch — update tween targets
+function switchScen(name){{
+  curScen=name;
+  document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-'+name).classList.add('active');
+  const sc=D.scens[name];
+  let gi=0,pi=0,si=0;
+  for(const n of nkns){{
+    if(n.type==='g'){{
+      n.targetScale=sc.r_g*n.szF;n.targetOpacity=gi<sc.n_g?0.90:0.0;gi++;
+    }}else if(n.type==='p'){{
+      n.targetScale=sc.r_p*n.szF;n.targetOpacity=pi<sc.n_p?0.90:0.0;pi++;
+    }}else{{
+      n.targetScale=sc.r_s*n.szF;n.targetOpacity=si<sc.n_s?0.90:0.0;si++;
+    }}
+  }}
+}}
+
+const _tmpV=new THREE.Vector3();
 let t=0;
 function animate(){{
-  requestAnimationFrame(animate);
-  t+=0.004;
-  // Camera orbits UE (which stays fixed at origin)
+  requestAnimationFrame(animate);t+=0.004;
   camera.position.x=8*Math.sin(t*.38);
   camera.position.z=8*Math.cos(t*.38);
   camera.position.y=1.5+1.1*Math.sin(t*.16);
   camera.lookAt(0,0,0);
-  // Background electron Brownian (slow)
+
+  // UE label — front-facing surface
+  if(D.mono&&ueLabel){{
+    _tmpV.copy(camera.position).normalize().multiplyScalar(0.30);
+    ueLabel.position.set(_tmpV.x,_tmpV.y,_tmpV.z);
+  }}
+
+  // Background electron Brownian
   for(const e of bgEs){{
     e.vx+=(Math.random()-.5)*.0022;e.vy+=(Math.random()-.5)*.0022;e.vz+=(Math.random()-.5)*.0022;
     e.vx*=.980;e.vy*=.980;e.vz*=.980;
     e.mesh.position.x+=e.vx;e.mesh.position.y+=e.vy;e.mesh.position.z+=e.vz;
-    if(D.mono&&e.label)e.label.position.copy(e.mesh.position);
+    if(D.mono&&e.label){{
+      _tmpV.subVectors(camera.position,e.mesh.position).normalize().multiplyScalar(e.sz*0.85);
+      e.label.position.copy(e.mesh.position).add(_tmpV);
+    }}
   }}
-  // Nucleon Brownian + weak spring back to orbital band
+
+  // Nucleon Brownian + tween
   for(const n of nkns){{
+    // Lerp scale and opacity (morph)
+    n.curScale+=(n.targetScale-n.curScale)*LERP;
+    n.curOpacity+=(n.targetOpacity-n.curOpacity)*LERP;
+    n.mesh.scale.setScalar(n.curScale);
+    n.mesh.material.opacity=n.curOpacity;
+    n.mesh.visible=n.curOpacity>0.01;
+
+    if(!n.mesh.visible){{
+      if(D.mono&&n.label)n.label.visible=false;
+      if(D.arrows&&n.arrow)n.arrow.ref.visible=false;
+      if(D.arrows&&n.arrowPair){{n.arrowPair[0].ref.visible=false;n.arrowPair[1].ref.visible=false;}}
+      continue;
+    }}
+    if(D.mono&&n.label)n.label.visible=true;
+
+    // Brownian motion
     n.vx+=(Math.random()-.5)*.0028;n.vy+=(Math.random()-.5)*.0028;n.vz+=(Math.random()-.5)*.0028;
     const p=n.mesh.position;
     const r=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
@@ -1931,16 +2013,24 @@ function animate(){{
     n.vx+=p.x*k;n.vy+=p.y*k;n.vz+=p.z*k;
     n.vx*=.974;n.vy*=.974;n.vz*=.974;
     p.x+=n.vx;p.y+=n.vy;p.z+=n.vz;
-    if(D.mono&&n.label)n.label.position.set(p.x,p.y+0.09,p.z);
+
+    // Monogram: offset toward camera onto sphere surface
+    if(D.mono&&n.label){{
+      _tmpV.subVectors(camera.position,p).normalize().multiplyScalar(n.curScale*0.85);
+      n.label.position.copy(p).add(_tmpV);
+      const ls=n.curScale*3.2;n.label.scale.set(ls,ls,1);
+    }}
+    // Arrows
     if(D.arrows){{
       const nv=new THREE.Vector3(p.x,p.y,p.z);
       if(n.arrow){{
+        n.arrow.ref.visible=true;
         const fr=n.arrow.from==='ue'?UE:nv,to=n.arrow.to==='ue'?UE:nv;
         updateArrow(n.arrow.ref,fr,to);
       }}
       if(n.arrowPair){{
-        updateArrow(n.arrowPair[0].ref,UE,nv);
-        updateArrow(n.arrowPair[1].ref,nv,UE);
+        n.arrowPair[0].ref.visible=true;n.arrowPair[1].ref.visible=true;
+        updateArrow(n.arrowPair[0].ref,UE,nv);updateArrow(n.arrowPair[1].ref,nv,UE);
       }}
     }}
   }}
@@ -2143,45 +2233,6 @@ with st.expander("Populations", expanded=False):
         )
         with _cw:
             st.plotly_chart(_fig_pop, use_container_width=True)
-
-# ====================== UNIVERSE ======================
-st.markdown('<div id="universe"></div>', unsafe_allow_html=True)
-with st.expander("Universe Visualization", expanded=not _is_mobile):
-    _utab3d, _utab3, _utab1 = st.tabs(["🌌 3D", "🔭 3-Panel", "🎯 Single View"])
-    with _utab3d:
-        _3d_sel = st.radio(
-            "Scenario", ["Left", "Center", "Right"],
-            horizontal=True, key="uni_3d_sel",
-            label_visibility="collapsed",
-        )
-        _3d_ck1, _3d_ck2 = st.columns(2)
-        with _3d_ck1:
-            _3d_arrows = st.checkbox("Arrows", key="uni_3d_arrows")
-        with _3d_ck2:
-            _3d_mono = st.checkbox("Monograms", key="uni_3d_mono")
-        _3d_scen_key = {"Left": "cCon (Left)", "Center": "Center", "Right": "dCon (Right)"}
-        _components.html(
-            _build_universe_3d(_3d_scen_key[_3d_sel], _3d_sel,
-                               show_arrows=_3d_arrows, show_mono=_3d_mono, height=560),
-            height=560,
-            scrolling=False,
-        )
-    with _utab3:
-        _uni_cols = st.columns(3)
-        for _ucol, (scen, label) in zip(_uni_cols, SCENARIOS):
-            with _ucol:
-                st.plotly_chart(_build_universe_fig(scen, label), use_container_width=True)
-    with _utab1:
-        _uni_sel = st.radio(
-            "Scenario", ["Left", "Center", "Right"],
-            horizontal=True, key="uni_single_sel",
-            label_visibility="collapsed",
-        )
-        _uni_scen_key = {"Left": "cCon (Left)", "Center": "Center", "Right": "dCon (Right)"}
-        st.plotly_chart(
-            _build_universe_fig(_uni_scen_key[_uni_sel], _uni_sel, height=580),
-            use_container_width=True,
-        )
 
 # ====================== TABLES ======================
 st.markdown('<div id="tables"></div>', unsafe_allow_html=True)
