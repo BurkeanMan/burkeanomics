@@ -856,7 +856,7 @@ def _build_universe_fig(scen, label, height=420):
     for ann_y, ann_text, ann_color, ann_size in [
         (1.28, f"<b>{label}</b>", "white", 14),
         (1.15, "Bubble Size = $$$ Power", "#aaaaaa", 9),
-        (1.06, "⚠ WARNING: Nucleons 1,000s–10,000s× Larger IRL", "#ffaa44", 9),
+        (1.06, "⚠ WARNING: Nucleons 1,000s× Larger IRL", "#ffaa44", 9),
     ]:
         fig.add_annotation(
             x=0.5, y=ann_y, xref="paper", yref="paper",
@@ -954,7 +954,7 @@ canvas{{display:block}}
   <button class="sbtn" id="btn-Center" onclick="switchScen('Center')">Center</button>
   <button class="sbtn" id="btn-Right" onclick="switchScen('Right')">Right</button>
 </div>
-<div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons 1,000s&#8211;10,000s&times; Larger IRL</div>
+<div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; WARNING: Nucleons 1,000s&times; Larger IRL</div>
 <button id="fsbtn" onclick="toggleFS()" title="Fullscreen">&#x26F6;</button>
 <div id="lg">
   <span style="color:#aaccee">&#9679; Electrons <span id="lg-e" style="color:#778899">1&times;</span></span><br>
