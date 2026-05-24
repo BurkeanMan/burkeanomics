@@ -996,7 +996,7 @@ function mkSphere(initR,color,x,y,z,opacity,emInt){{
 function mkLabel(letter,col){{
   const cv=document.createElement('canvas');cv.width=cv.height=64;
   const cx=cv.getContext('2d');
-  cx.fillStyle=col;cx.font='bold 42px sans-serif';
+  cx.fillStyle=col;cx.font='300 32px sans-serif';
   cx.textAlign='center';cx.textBaseline='middle';cx.fillText(letter,32,32);
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({{map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}}));
   return sp;
@@ -1005,7 +1005,7 @@ function updateArrow(arr,from,to){{
   const dir=new THREE.Vector3().subVectors(to,from);
   const len=dir.length();if(len<0.15)return;
   arr.position.copy(from);arr.setDirection(dir.normalize());
-  arr.setLength(len,Math.min(0.16,len*0.22),Math.min(0.08,len*0.11));
+  arr.setLength(len,Math.min(0.30,len*0.36),Math.min(0.15,len*0.18));
 }}
 
 const UE=new THREE.Vector3(0,0,0);
@@ -1017,7 +1017,7 @@ const hm=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),
 hm.scale.setScalar(0.44);scene.add(hm);
 let ueLabel=null;
 if(D.mono){{
-  ueLabel=mkLabel('E','#cce4ff');ueLabel.scale.set(0.42,0.42,1);scene.add(ueLabel);
+  ueLabel=mkLabel('E','#FFD700');ueLabel.scale.set(0.42,0.42,1);scene.add(ueLabel);
 }}
 
 // Background Electrons — scattered, slow Brownian
@@ -1029,7 +1029,7 @@ for(let i=0;i<30;i++){{
   const mesh=mkSphere(sz,0x7799bb,x,y,z,0.42,0.14);
   const eo={{mesh,vx:(Math.random()-.5)*.004,vy:(Math.random()-.5)*.004,vz:(Math.random()-.5)*.004,sz}};
   if(D.mono){{
-    const sl=mkLabel('E','#aaccee');sl.scale.set(sz*2.8,sz*2.8,1);scene.add(sl);eo.label=sl;
+    const sl=mkLabel('E','#FFD700');sl.scale.set(sz*2.8,sz*2.8,1);scene.add(sl);eo.label=sl;
   }}
   bgEs.push(eo);
 }}
@@ -1046,23 +1046,26 @@ function addGroup(maxN,r0,sig,initR3d,col,type,letter){{
     const obj={{mesh,r0,type,szF,
       curScale:initR3d*szF,targetScale:initR3d*szF,
       curOpacity:initOp,targetOpacity:initOp,
+      arrowPhase:Math.random()*Math.PI*2,
       vx:(Math.random()-.5)*.009,vy:(Math.random()-.5)*.009,vz:(Math.random()-.5)*.009}};
     if(D.mono){{
-      const sl=mkLabel(letter,'#ffffff');
+      const lc=letter==='G'?'#ff3333':'#ffffff';
+      const sl=mkLabel(letter,lc);
       sl.scale.set(initR3d*szF*3.2,initR3d*szF*3.2,1);scene.add(sl);obj.label=sl;obj.labelSz=initR3d*szF*3.2;
     }}
     if(D.arrows&&initOp>0){{
       const dv=new THREE.Vector3(1,0,0);
+      function mkArr(origin,c){{
+        const a=new THREE.ArrowHelper(dv,origin,1,c,0.30,0.15);
+        a.line.material.transparent=true;a.cone.material.transparent=true;
+        scene.add(a);return a;
+      }}
       if(type==='g'){{
-        const arr=new THREE.ArrowHelper(dv,UE.clone(),1,col,0.14,0.07);
-        scene.add(arr);obj.arrow={{ref:arr,from:'ue',to:'n'}};
+        const arr=mkArr(UE.clone(),col);obj.arrow={{ref:arr,from:'ue',to:'n'}};
       }}else if(type==='p'){{
-        const arr=new THREE.ArrowHelper(dv,new THREE.Vector3(x,y,z),1,col,0.14,0.07);
-        scene.add(arr);obj.arrow={{ref:arr,from:'n',to:'ue'}};
+        const arr=mkArr(new THREE.Vector3(x,y,z),col);obj.arrow={{ref:arr,from:'n',to:'ue'}};
       }}else{{
-        const a1=new THREE.ArrowHelper(dv,UE.clone(),1,col,0.12,0.06);
-        const a2=new THREE.ArrowHelper(dv,new THREE.Vector3(x,y,z),1,col,0.12,0.06);
-        scene.add(a1);scene.add(a2);
+        const a1=mkArr(UE.clone(),col),a2=mkArr(new THREE.Vector3(x,y,z),col);
         obj.arrowPair=[{{ref:a1,from:'ue',to:'n'}},{{ref:a2,from:'n',to:'ue'}}];
       }}
     }}
@@ -1149,16 +1152,21 @@ function animate(){{
       n.label.position.copy(p).add(_tmpV);
       const ls=n.curScale*3.2;n.label.scale.set(ls,ls,1);
     }}
-    // Arrows
+    // Arrows — pulsing energy
     if(D.arrows){{
       const nv=new THREE.Vector3(p.x,p.y,p.z);
+      const pulse=0.20+0.80*(0.5+0.5*Math.sin(t*5.5+n.arrowPhase));
+      function applyPulse(a){{
+        a.line.material.opacity=pulse;a.cone.material.opacity=pulse;
+      }}
       if(n.arrow){{
-        n.arrow.ref.visible=true;
+        n.arrow.ref.visible=true;applyPulse(n.arrow.ref);
         const fr=n.arrow.from==='ue'?UE:nv,to=n.arrow.to==='ue'?UE:nv;
         updateArrow(n.arrow.ref,fr,to);
       }}
       if(n.arrowPair){{
         n.arrowPair[0].ref.visible=true;n.arrowPair[1].ref.visible=true;
+        applyPulse(n.arrowPair[0].ref);applyPulse(n.arrowPair[1].ref);
         updateArrow(n.arrowPair[0].ref,UE,nv);updateArrow(n.arrowPair[1].ref,nv,UE);
       }}
     }}
@@ -1186,8 +1194,8 @@ with st.expander("Universe Visualization", expanded=not _is_mobile):
         with _3d_ck2:
             _3d_mono = st.checkbox("Monograms", key="uni_3d_mono")
         _components.html(
-            _build_universe_3d(show_arrows=_3d_arrows, show_mono=_3d_mono, height=580),
-            height=580,
+            _build_universe_3d(show_arrows=_3d_arrows, show_mono=_3d_mono, height=820),
+            height=820,
             scrolling=False,
         )
     with _utab3:
