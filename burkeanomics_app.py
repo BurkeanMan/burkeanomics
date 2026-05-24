@@ -856,7 +856,7 @@ def _build_universe_fig(scen, label, height=420):
     for ann_y, ann_text, ann_color, ann_size in [
         (1.28, f"<b>{label}</b>", "white", 14),
         (1.15, "Bubble Size = $$$ Power", "#aaaaaa", 9),
-        (1.06, "⚠ WARNING: Nucleons 1,000s× Larger IRL", "#ffaa44", 9),
+        (1.06, "⚠ Nucleons Thousands× Larger", "#ffaa44", 9),
     ]:
         fig.add_annotation(
             x=0.5, y=ann_y, xref="paper", yref="paper",
@@ -957,7 +957,7 @@ canvas{{display:block}}
   <button class="sbtn" id="btn-Center" onclick="switchScen('Center')">Center</button>
   <button class="sbtn" id="btn-Right" onclick="switchScen('Right')">Right</button>
 </div>
-<div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; WARNING: Nucleons 1,000s&times; Larger IRL</div>
+<div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons Thousands&times; Larger</div>
 <button id="fsbtn" onclick="toggleFS()" title="Fullscreen">&#x26F6;</button>
 <div id="lg"><table>
   <tr><td class="nm" style="color:#aaccee">Electrons</td><td class="xv" id="lg-e">1&times;</td></tr>
@@ -965,7 +965,7 @@ canvas{{display:block}}
   <tr><td class="nm" style="color:#66cc66">Providers</td><td class="xv" id="lg-p"></td></tr>
   <tr><td class="nm" style="color:#cc4444">SinSayers</td><td class="xv" id="lg-s"></td></tr>
 </table></div>
-<div id="footer">&copy; 2026 David Burkean &bull; Commercial use by permission &bull; All Rights Reserved</div>
+<div id="footer">&copy; 2026 David Burkean &bull; Sharing is caring &bull; Commercial use by permission &bull; All Rights Reserved</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const D={d};
@@ -1238,29 +1238,34 @@ function animate(){{
   renderer.render(scene,camera);
 }}
 animate();
-// Full-page fullscreen so overlay divs travel with the canvas
 let _fakeFS=false;
 const _fsRoot=document.documentElement;
+const _isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)&&!window.MSStream;
 function _enterFakeFS(){{
   _fakeFS=true;
   document.getElementById('fsbtn').textContent='✕';
   const w=window.innerWidth,h=window.screen.height;
   window.parent.postMessage({{isStreamlitMessage:true,type:'streamlit:setFrameHeight',height:h+60}},'*');
+  renderer.domElement.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:5';
   renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
 }}
 function _exitFakeFS(){{
   _fakeFS=false;
   document.getElementById('fsbtn').textContent='⛶';
   window.parent.postMessage({{isStreamlitMessage:true,type:'streamlit:setFrameHeight',height:{H}+8}},'*');
+  renderer.domElement.style.cssText='';
   renderer.setSize(window.innerWidth,{H});camera.aspect=window.innerWidth/{H};camera.updateProjectionMatrix();
 }}
 function toggleFS(){{
   if(_fakeFS){{_exitFakeFS();return;}}
   const isFS=document.fullscreenElement||document.webkitFullscreenElement;
   if(isFS){{const ex=document.exitFullscreen||document.webkitExitFullscreen;if(ex)ex.call(document);return;}}
+  if(_isIOS){{_enterFakeFS();return;}}
   const req=_fsRoot.requestFullscreen||_fsRoot.webkitRequestFullscreen;
-  if(req)req.call(_fsRoot).then(()=>{{document.getElementById('fsbtn').textContent='✕';}}).catch(()=>_enterFakeFS());
-  else _enterFakeFS();
+  try{{
+    if(req)req.call(_fsRoot).then(()=>{{document.getElementById('fsbtn').textContent='✕';}}).catch(()=>_enterFakeFS());
+    else _enterFakeFS();
+  }}catch(e){{_enterFakeFS();}}
 }}
 function _onFSChange(){{
   const isFS=document.fullscreenElement||document.webkitFullscreenElement;
