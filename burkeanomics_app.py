@@ -1013,13 +1013,13 @@ function updateArrow(arr,from,to){{
 const UE=new THREE.Vector3(0,0,0);
 
 // UE — focal Electron, stays fixed
-const ueMesh=mkSphere(0.22,0x99bbdd,0,0,0,1.0,0.85);
+const ueMesh=mkSphere(0.03,0x99bbdd,0,0,0,1.0,0.95);
 const hm=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),
-  new THREE.MeshPhongMaterial({{color:0x88aacc,transparent:true,opacity:0.13,side:THREE.BackSide}}));
-hm.scale.setScalar(0.44);scene.add(hm);
+  new THREE.MeshPhongMaterial({{color:0x88aacc,transparent:true,opacity:0.18,side:THREE.BackSide}}));
+hm.scale.setScalar(0.06);scene.add(hm);
 let ueLabel=null;
 if(D.mono){{
-  ueLabel=mkLabel('E','#FFD700');ueLabel.scale.set(0.42,0.42,1);scene.add(ueLabel);
+  ueLabel=mkLabel('E','#FFD700');ueLabel.scale.set(0.10,0.10,1);scene.add(ueLabel);
 }}
 
 // Background Electrons — scattered, slow Brownian
@@ -1107,7 +1107,7 @@ function animate(){{
 
   // UE label — front-facing surface
   if(D.mono&&ueLabel){{
-    _tmpV.copy(camera.position).normalize().multiplyScalar(0.30);
+    _tmpV.copy(camera.position).normalize().multiplyScalar(0.06);
     ueLabel.position.set(_tmpV.x,_tmpV.y,_tmpV.z);
   }}
 
