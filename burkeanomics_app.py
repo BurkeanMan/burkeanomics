@@ -996,7 +996,7 @@ function mkSphere(initR,color,x,y,z,opacity,emInt){{
 function mkLabel(letter,col){{
   const cv=document.createElement('canvas');cv.width=cv.height=64;
   const cx=cv.getContext('2d');
-  cx.fillStyle=col;cx.font='300 32px sans-serif';
+  cx.fillStyle=col;cx.font='bold 32px sans-serif';
   cx.textAlign='center';cx.textBaseline='middle';cx.fillText(letter,32,32);
   const sp=new THREE.Sprite(new THREE.SpriteMaterial({{map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}}));
   return sp;
