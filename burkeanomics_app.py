@@ -937,11 +937,11 @@ def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
 *{{margin:0;padding:0;box-sizing:border-box}}
 body{{background:#0d1b2a;overflow:hidden;font-family:sans-serif}}
 canvas{{display:block}}
-#lg{{position:absolute;bottom:8px;left:10px;color:#dde;font-size:10px;line-height:2.0;pointer-events:none;
-     background:rgba(0,8,20,0.60);border-radius:6px;padding:5px 9px}}
-#footer{{position:absolute;bottom:6px;right:10px;color:#8899aa;font-size:8px;pointer-events:none;text-align:right;line-height:1.5}}
+#lg{{position:absolute;bottom:8px;left:10px;color:#dde;font-size:20px;line-height:2.0;pointer-events:none;
+     background:rgba(0,8,20,0.60);border-radius:8px;padding:10px 18px}}
+#footer{{position:absolute;bottom:8px;right:12px;color:#8899aa;font-size:16px;pointer-events:none;text-align:right;line-height:1.6}}
 #btns{{position:absolute;top:6px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto;z-index:10}}
-#sb{{position:absolute;top:38px;left:0;width:100%;text-align:center;color:#99aabb;font-size:9px;pointer-events:none;z-index:9}}
+#sb{{position:absolute;top:38px;left:0;width:100%;text-align:center;color:#99aabb;font-size:18px;pointer-events:none;z-index:9}}
 #fsbtn{{position:absolute;top:6px;right:8px;background:#1e3a5f;color:#aaccee;border:1px solid #335577;
         border-radius:4px;padding:3px 8px;font-size:15px;cursor:pointer;pointer-events:auto;z-index:10;line-height:1}}
 .sbtn{{background:#1e3a5f;color:#aaccee;border:1px solid #335577;border-radius:4px;
