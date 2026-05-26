@@ -218,6 +218,24 @@ _EXPORT_PREFIXES = (
     "note_", "url_", "dark_mode",
 )
 
+# ====================== WELCOME SIDEBAR ======================
+with st.sidebar.expander("👋 Welcome to Burkeanomics", expanded=not is_logged_in()):
+    st.markdown("""
+Burkean Economics is a novel form of behavioral economics that models our very human world as a collection of particles.
+
+There are four classes of Burkean particles: **Electrons** and three kinds of **Nucleons**. Like particle physics, they interact with each other in understandable ways — both within their class and across classes.
+
+Burkeanomics models the economic world around you, with **you at the center**:
+
+- **Electrons** — families and singles like you
+- **GovNukes** — governmental agencies
+- **Providers** — schools, hospitals, businesses
+- **SinSayers** — religions, movements, and moral arbiters
+
+Use the parameters lower in this sidebar and the Electron Throttles in the dashboard to tune the of three control cases — **cCon Left**, **Center**, and **dCon Right** — and see how each case plays out.
+""")
+    st.markdown("**Questions or feedback?** [Let us know →](https://tally.so/r/aQaAz2)", unsafe_allow_html=False)
+
 # ====================== ACCOUNT SIDEBAR ======================
 with st.sidebar.expander("🔐 Account", expanded=not is_logged_in()):
     if is_logged_in():
@@ -228,40 +246,29 @@ with st.sidebar.expander("🔐 Account", expanded=not is_logged_in()):
             sign_out()
             st.rerun()
     else:
-        _auth_mode = st.radio("", ["Sign In", "Sign Up"], horizontal=True, key="sb_auth_mode", label_visibility="collapsed")
         _sb_email = st.text_input("Email", key="sb_email")
         _sb_pw = st.text_input("Password", type="password", key="sb_pw")
         _cookie_exp = datetime.now() + timedelta(days=30)
-        if _auth_mode == "Sign In":
-            if st.button("Sign In", key="sb_signin_btn"):
-                try:
-                    sign_in(_sb_email, _sb_pw)
-                    _cm.set("sb_access_token", st.session_state["sb_access_token"], expires_at=_cookie_exp)
-                    _cm.set("sb_refresh_token", st.session_state["sb_refresh_token"], expires_at=_cookie_exp)
-                    st.rerun()
-                except Exception as _e:
-                    st.error(f"Sign in failed: {_e}")
-            with st.expander("Forgot password?"):
-                _reset_email = st.text_input("Email", key="sb_reset_email")
-                if st.button("Send reset email", key="sb_reset_btn"):
-                    if _reset_email:
-                        try:
-                            send_password_reset(_reset_email)
-                            st.success("Check your email for a reset link.")
-                        except Exception as _e:
-                            st.error(f"Failed: {_e}")
-                    else:
-                        st.error("Enter your email.")
-        else:
-            if st.button("Sign Up", key="sb_signup_btn"):
-                try:
-                    sign_up(_sb_email, _sb_pw)
-                    if "sb_access_token" in st.session_state:
-                        _cm.set("sb_access_token", st.session_state["sb_access_token"], expires_at=_cookie_exp)
-                        _cm.set("sb_refresh_token", st.session_state["sb_refresh_token"], expires_at=_cookie_exp)
-                    st.success("Account created! Check your email to confirm.")
-                except Exception as _e:
-                    st.error(f"Sign up failed: {_e}")
+        if st.button("Sign In", key="sb_signin_btn"):
+            try:
+                sign_in(_sb_email, _sb_pw)
+                _cm.set("sb_access_token", st.session_state["sb_access_token"], expires_at=_cookie_exp)
+                _cm.set("sb_refresh_token", st.session_state["sb_refresh_token"], expires_at=_cookie_exp)
+                st.rerun()
+            except Exception as _e:
+                st.error(f"Sign in failed: {_e}")
+        with st.expander("Forgot password?"):
+            _reset_email = st.text_input("Email", key="sb_reset_email")
+            if st.button("Send reset email", key="sb_reset_btn"):
+                if _reset_email:
+                    try:
+                        send_password_reset(_reset_email)
+                        st.success("Check your email for a reset link.")
+                    except Exception as _e:
+                        st.error(f"Failed: {_e}")
+                else:
+                    st.error("Enter your email.")
+        st.caption("Alpha access is by invitation. [Request access →](mailto:david@bnation.us?subject=Burkeanomics%20Sim%20Alpha%20Access%20Request)")
 
 # ====================== MY UNIVERSES SIDEBAR ======================
 if is_logged_in():
@@ -640,6 +647,8 @@ with st.sidebar.expander("**🏷️ Metadata**", expanded=False):
         except Exception as e:
             st.error(f"Import failed: {e}")
 
+st.sidebar.caption("d2.76")
+
 # ====================== CALCULATIONS ======================
 
 # ====================== DASH ======================
@@ -856,7 +865,7 @@ def _build_universe_fig(scen, label, height=420):
     for ann_y, ann_text, ann_color, ann_size in [
         (1.28, f"<b>{label}</b>", "white", 14),
         (1.15, "Bubble Size = $$$ Power", "#aaaaaa", 9),
-        (1.06, "⚠ Nucleons Thousands × Larger", "#ffaa44", 9),
+        (1.06, "⚠ Nucleons Thousands × Larger IRL", "#ffaa44", 9),
     ]:
         fig.add_annotation(
             x=0.5, y=ann_y, xref="paper", yref="paper",
@@ -957,7 +966,7 @@ canvas{{display:block}}
   <button class="sbtn" id="btn-Center" onclick="switchScen('Center')">Center</button>
   <button class="sbtn" id="btn-Right" onclick="switchScen('Right')">Right</button>
 </div>
-<div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons Thousands &times; Larger</div>
+<div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons Thousands &times; Larger IRL</div>
 <button id="fsbtn" onclick="toggleFS()" title="Fullscreen">&#x26F6;</button>
 <div id="lg"><table>
   <tr><td class="nm" style="color:#aaccee">Electrons</td><td class="xv" id="lg-e">1&times;</td></tr>
