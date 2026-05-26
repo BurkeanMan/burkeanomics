@@ -48,16 +48,17 @@ if "sb_user" not in st.session_state:
             _cm.delete("sb_refresh_token")
 
 _recovery_token   = st.query_params.get("sb_recovery", "")
+_invite_token     = st.query_params.get("sb_invite", "")
 _recovery_refresh = st.query_params.get("sb_refresh", "")
 
 st.set_page_config(
-    page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="expanded"
+    page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="collapsed"
 )
 
-# Force one silent rerun on first load so all React expander handlers are hydrated
-# before the user tries to open sections via TOC links.
-if "initialized" not in st.session_state:
-    st.session_state["initialized"] = True
+# Two silent reruns on first load: first for React hydration, second to ensure
+# CookieManager has had a full cycle to read stored auth tokens.
+if st.session_state.get("_init_count", 0) < 2:
+    st.session_state["_init_count"] = st.session_state.get("_init_count", 0) + 1
     st.rerun()
 
 # Detect screen width via JS; sets ?sw=m (mobile) or ?sw=p (tablet/desktop) on first load.
@@ -124,26 +125,50 @@ _components.html(
         setTimeout(function() { openExpander(window.parent.location.hash); }, 80);
     });
 
-    // Password-reset recovery: Supabase puts tokens in the hash fragment.
+    // Supabase puts auth tokens in the hash fragment for recovery and invite flows.
     // Convert to query params so Streamlit can read them, then strip the hash.
     (function() {
         var h = window.parent.location.hash;
-        if (h && h.indexOf('type=recovery') !== -1) {
-            var p = new URLSearchParams(h.slice(1));
-            var at = p.get('access_token'), rt = p.get('refresh_token') || '';
-            if (at) {
-                var u = new URL(window.parent.location.href);
-                u.hash = '';
-                u.searchParams.set('sb_recovery', at);
-                u.searchParams.set('sb_refresh', rt);
-                window.parent.location.replace(u.toString());
-            }
+        if (!h) return;
+        var p = new URLSearchParams(h.slice(1));
+        var type = p.get('type'), at = p.get('access_token'), rt = p.get('refresh_token') || '';
+        if (!at) return;
+        var u = new URL(window.parent.location.href);
+        u.hash = '';
+        u.searchParams.set('sb_refresh', rt);
+        if (type === 'recovery') {
+            u.searchParams.set('sb_recovery', at);
+        } else if (type === 'invite') {
+            u.searchParams.set('sb_invite', at);
         }
+        window.parent.location.replace(u.toString());
     })();
 })();
 </script>""",
     height=0,
 )
+
+# ── Invite form (shown when user arrives via Supabase invite email) ────────────
+if _invite_token:
+    st.title("👋 Welcome to Burkeanomics")
+    st.markdown("You've been invited! Set a password to create your account.")
+    _np1 = st.text_input("Password", type="password", key="pw_new1")
+    _np2 = st.text_input("Confirm password", type="password", key="pw_new2")
+    if st.button("Create account", key="pw_invite_btn"):
+        if not _np1:
+            st.error("Enter a password.")
+        elif _np1 != _np2:
+            st.error("Passwords don't match.")
+        elif len(_np1) < 6:
+            st.error("Password must be at least 6 characters.")
+        else:
+            try:
+                update_password(_invite_token, _recovery_refresh, _np1)
+                st.query_params.clear()
+                st.success("Account created! Use the Account panel in the sidebar to sign in.")
+            except Exception as _e:
+                st.error(f"Setup failed: {_e}")
+    st.stop()
 
 # ── Password recovery form (shown when user arrives via reset-email link) ──────
 if _recovery_token:
@@ -171,7 +196,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.63</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.77</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -219,7 +244,7 @@ _EXPORT_PREFIXES = (
 )
 
 # ====================== WELCOME SIDEBAR ======================
-with st.sidebar.expander("👋 Welcome to Burkeanomics", expanded=not is_logged_in()):
+with st.sidebar.expander("👋 Welcome to Burkeanomics", expanded=False):
     st.markdown("""
 Burkean Economics is a novel form of behavioral economics that models our very human world as a collection of particles.
 
@@ -232,7 +257,9 @@ Burkeanomics models the economic world around you, with **you at the center**:
 - **Providers** — schools, hospitals, businesses
 - **SinSayers** — religions, movements, and moral arbiters
 
-Use the parameters lower in this sidebar and the Electron Throttles in the dashboard to tune the of three control cases — **cCon Left**, **Center**, and **dCon Right** — and see how each case plays out.
+Use the parameters lower in this sidebar and the Electron Throttles in the dashboard to tune the three control cases — **cCon Left**, **Center**, and **dCon Right** — and see how each case plays out.
+                
+You are well advised to familize yourself with the pages under the References panel atop the dashboard. Those will familiarize you with the Burkean ontology, terminology and theory.
 """)
     st.markdown("**Questions or feedback?** [Let us know →](https://tally.so/r/aQaAz2)", unsafe_allow_html=False)
 
@@ -647,7 +674,7 @@ with st.sidebar.expander("**🏷️ Metadata**", expanded=False):
         except Exception as e:
             st.error(f"Import failed: {e}")
 
-st.sidebar.caption("d2.76")
+st.sidebar.caption("d2.77")
 
 # ====================== CALCULATIONS ======================
 
