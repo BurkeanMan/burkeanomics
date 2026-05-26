@@ -150,8 +150,21 @@ _components.html(
 
 # ── Invite form (shown when user arrives via Supabase invite email) ────────────
 if _invite_token:
-    st.title("👋 Welcome to Burkeanomics")
-    st.markdown("You've been invited! Set a password to create your account.")
+    _invite_email = ""
+    try:
+        from supabase_client import get_supabase
+        _sb = get_supabase()
+        _sb.auth.set_session(_invite_token, _recovery_refresh)
+        _invite_user = _sb.auth.get_user()
+        if _invite_user and _invite_user.user:
+            _invite_email = _invite_user.user.email
+    except Exception:
+        pass
+    st.title("👋 Welcome to the Burkeanomics Simulator")
+    st.markdown("You've been invited!")
+    if _invite_email:
+        st.markdown(f"**Email:** {_invite_email}")
+    st.markdown("Set a password to create your account.")
     _np1 = st.text_input("Password", type="password", key="pw_new1")
     _np2 = st.text_input("Confirm password", type="password", key="pw_new2")
     if st.button("Create account", key="pw_invite_btn"):
