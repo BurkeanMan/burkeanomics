@@ -214,7 +214,7 @@ with _ver_col:
     )
 with _gen_col:
     if st.button(
-        "Generate PDF",
+        "PDF TBD",
         key="generate_pdf_btn_top",
         disabled=st.session_state.get("_generate_pdf_pending", False),
     ):
@@ -992,8 +992,9 @@ canvas{{display:block}}
 #lg td.nm{{text-align:left;padding-right:18px}}
 #lg td.xv{{text-align:right;color:#778899}}
 #footer{{position:absolute;bottom:8px;right:12px;color:#8899aa;font-size:16px;pointer-events:none;text-align:right;line-height:1.6}}
-#btns{{position:absolute;top:6px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto;z-index:10}}
-#sb{{position:absolute;top:38px;left:0;width:100%;text-align:center;color:#99aabb;font-size:18px;pointer-events:none;z-index:9}}
+#wintitle{{position:absolute;top:6px;left:0;width:100%;text-align:center;color:#aaccee;font-size:18px;font-weight:600;pointer-events:none;z-index:8}}
+#btns{{position:absolute;top:32px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto;z-index:10}}
+#sb{{position:absolute;top:62px;left:0;width:100%;text-align:center;color:#99aabb;font-size:18px;pointer-events:none;z-index:9}}
 #fsbtn{{position:absolute;top:6px;right:8px;background:#1e3a5f;color:#aaccee;border:1px solid #335577;
         border-radius:4px;padding:3px 8px;font-size:15px;cursor:pointer;pointer-events:auto;z-index:10;line-height:1}}
 .sbtn{{background:#1e3a5f;color:#aaccee;border:1px solid #335577;border-radius:4px;
@@ -1001,6 +1002,7 @@ canvas{{display:block}}
 .sbtn.active{{background:#2255aa;color:#ffffff;border-color:#4477cc}}
 </style>
 </head><body>
+<div id="wintitle">Power per Capita</div>
 <div id="btns">
   <button class="sbtn active" id="btn-Left" onclick="switchScen('Left')">Left</button>
   <button class="sbtn" id="btn-Center" onclick="switchScen('Center')">Center</button>
