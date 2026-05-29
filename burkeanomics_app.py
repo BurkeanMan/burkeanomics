@@ -177,8 +177,12 @@ if _invite_token:
         else:
             try:
                 update_password(_invite_token, _recovery_refresh, _np1)
+                sign_in(_invite_email, _np1)
+                _cookie_exp = datetime.now() + timedelta(days=30)
+                _cm.set("sb_access_token", st.session_state["sb_access_token"], expires_at=_cookie_exp)
+                _cm.set("sb_refresh_token", st.session_state["sb_refresh_token"], expires_at=_cookie_exp)
                 st.query_params.clear()
-                st.success("Account created! Use the Account panel in the sidebar to sign in.")
+                st.rerun()
             except Exception as _e:
                 st.error(f"Setup failed: {_e}")
     st.stop()
