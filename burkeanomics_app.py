@@ -83,8 +83,7 @@ _components.html(
         '#brainpower':  'BrainPower',
         '#brains':      'Brains',
         '#power':       'Power',
-        '#population':  'Populations',
-        '#universe':    'Universe Visualization'
+        '#population':  'Populations'
     };
     function findDetails(label) {
         var all = window.parent.document.querySelectorAll('details');
@@ -785,8 +784,6 @@ st.markdown(
 )
 st.markdown(
     "<div style='display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 14px 0;font-size:14px;font-weight:600;justify-content:center;'>"
-    "<a href='#universe' style='color:#1155cc;text-decoration:none;'>Universe</a>"
-    "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
     "<a href='#throttles' style='color:#1155cc;text-decoration:none;'>Throttles</a>"
     "<span style='color:#bbb'>&nbsp;•&nbsp;</span>"
     "<a href='#brainpower' style='color:#1155cc;text-decoration:none;'>BrainPower</a>"
@@ -801,149 +798,6 @@ st.markdown(
     "</div>",
     unsafe_allow_html=True,
 )
-
-# ---- Universe Visualization ----
-_NUKE_SHADES = {
-    "s": ["#8B0000", "#B22222", "#A52A2A", "#C00000", "#7B0000"],
-    "p": ["#228B22", "#32CD32", "#1A7A1A", "#3CB371", "#006400"],
-    "g": ["#FFD700", "#DAA520", "#FFC000", "#B8860B", "#9A7800"],
-}
-
-
-def _build_universe_fig(scen, label, height=420):
-    sfx_map = {"cCon (Left)": "c", "Center": "center", "dCon (Right)": "d"}
-    sfx = sfx_map[scen]
-    _dfpc = calculate_per_capita(scen).set_index("Class")
-    pw_e = float(_dfpc.loc["Electrons (throttled)", "Power ($)"])
-    pw_g = float(_dfpc.loc["GovNukes", "Power ($)"])
-    pw_p = float(_dfpc.loc["Providers", "Power ($)"])
-    pw_s = float(_dfpc.loc["SinSayers", "Power ($)"])
-    n_g = st.session_state.get(f"pop_g_{sfx}", 13)
-    n_p = st.session_state.get(f"pop_p_{sfx}", 40)
-    n_s = st.session_state.get(f"pop_s_{sfx}", 50)
-
-    log_lo = math.log10(min(pw_e, pw_g, pw_p, pw_s))
-    log_hi = math.log10(max(pw_e, pw_g, pw_p, pw_s))
-
-    def _sz(v):
-        t = (math.log10(max(v, 1)) - log_lo) / max(log_hi - log_lo, 1e-9)
-        return 8 + t * 24
-
-    def _ring(n, r):
-        return (
-            [r * math.cos(2 * math.pi * i / n) for i in range(n)],
-            [r * math.sin(2 * math.pi * i / n) for i in range(n)],
-        )
-
-    bg = "#0d1b2a"
-    fig = go.Figure()
-
-    # Faint orbital rings
-    for r in [0.5, 1.4, 2.4, 3.4]:
-        th = [2 * math.pi * i / 120 for i in range(121)]
-        fig.add_trace(go.Scatter(
-            x=[r * math.cos(t) for t in th], y=[r * math.sin(t) for t in th],
-            mode="lines", line=dict(color="rgba(255,255,255,0.07)", width=1),
-            hoverinfo="skip", showlegend=False,
-        ))
-
-    # SinSayers — outermost ring, 5 cycling shades
-    sx, sy = _ring(n_s, 3.4)
-    fig.add_trace(go.Scatter(
-        x=sx, y=sy, mode="markers",
-        marker=dict(
-            size=_sz(pw_s),
-            color=[_NUKE_SHADES["s"][i % 5] for i in range(n_s)],
-            opacity=0.9, line=dict(color="white", width=1),
-        ),
-        hovertemplate=f"SinSayer<br>${pw_s/1e6:.1f}M/cap<extra></extra>",
-        showlegend=False,
-    ))
-
-    # Providers — 5 cycling shades
-    px_v, py_v = _ring(n_p, 2.4)
-    fig.add_trace(go.Scatter(
-        x=px_v, y=py_v, mode="markers",
-        marker=dict(
-            size=_sz(pw_p),
-            color=[_NUKE_SHADES["p"][i % 5] for i in range(n_p)],
-            opacity=0.9, line=dict(color="white", width=1),
-        ),
-        hovertemplate=f"Provider<br>${pw_p/1e6:.1f}M/cap<extra></extra>",
-        showlegend=False,
-    ))
-
-    # GovNukes — 5 cycling shades
-    gx, gy = _ring(n_g, 1.4)
-    fig.add_trace(go.Scatter(
-        x=gx, y=gy, mode="markers",
-        marker=dict(
-            size=_sz(pw_g),
-            color=[_NUKE_SHADES["g"][i % 5] for i in range(n_g)],
-            opacity=0.9, line=dict(color="white", width=1),
-        ),
-        hovertemplate=f"GovNuke<br>${pw_g/1e6:.0f}M/cap<extra></extra>",
-        showlegend=False,
-    ))
-
-    # Background electrons
-    ex, ey = _ring(5, 0.5)
-    fig.add_trace(go.Scatter(
-        x=ex, y=ey, mode="markers",
-        marker=dict(size=_sz(pw_e), color="#3355aa", opacity=0.75),
-        hovertemplate=f"Electron<br>${pw_e:,.0f}/cap<extra></extra>",
-        showlegend=False,
-    ))
-
-    # Nemo — the focal Electron
-    fig.add_trace(go.Scatter(
-        x=[0], y=[0], mode="markers+text",
-        marker=dict(size=20, color="#00008B", line=dict(color="white", width=2)),
-        text=["E"], textfont=dict(color="white", size=9),
-        textposition="middle center",
-        hovertemplate=f"Electron (YOU)<br>${pw_e:,.0f}/cap<extra></extra>",
-        showlegend=False,
-    ))
-
-    # Title + subtitle annotations in top margin
-    for ann_y, ann_text, ann_color, ann_size in [
-        (1.28, f"<b>{label}</b>", "white", 14),
-        (1.15, "Bubble Size = $$$ Power", "#aaaaaa", 9),
-        (1.06, "⚠ Nucleons Thousands × Larger IRL", "#ffaa44", 9),
-    ]:
-        fig.add_annotation(
-            x=0.5, y=ann_y, xref="paper", yref="paper",
-            text=ann_text, showarrow=False,
-            font=dict(color=ann_color, size=ann_size),
-            xanchor="center", yanchor="bottom",
-        )
-
-    # Legend below chart
-    for i, (cls, pwr, clr) in enumerate([
-        ("Electron", f"${pw_e:,.0f}", "#aabbff"),
-        (f"GovNuke ×{n_g}", f"${pw_g/1e6:.0f}M", "#FFD700"),
-        (f"Provider ×{n_p}", f"${pw_p/1e6:.1f}M", "#66cc66"),
-        (f"SinSayer ×{n_s}", f"${pw_s/1e6:.1f}M", "#dd5555"),
-    ]):
-        fig.add_annotation(
-            x=0.13 + i * 0.25, y=-0.02,
-            xref="paper", yref="paper",
-            text=f"<b>{cls}</b><br>{pwr}/cap",
-            showarrow=False, font=dict(color=clr, size=11),
-            xanchor="center", yanchor="top", align="center",
-        )
-
-    fig.update_layout(
-        height=height, showlegend=False,
-        plot_bgcolor=bg, paper_bgcolor=bg,
-        xaxis=dict(range=[-4.2, 4.2], showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(range=[-4.2, 4.2], showgrid=False, zeroline=False,
-                   showticklabels=False, scaleanchor="x", scaleratio=1),
-        margin=dict(t=95, b=105, l=10, r=10),
-        title=dict(text=""),
-    )
-    return fig
-
 
 def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
     sfx_map = {"cCon (Left)": "c", "Center": "center", "dCon (Right)": "d"}
@@ -1338,38 +1192,6 @@ window.addEventListener('resize',()=>{{
 </body></html>"""
 
 
-
-# ====================== UNIVERSE ======================
-st.markdown('<div id="universe"></div>', unsafe_allow_html=True)
-with st.expander("Universe Visualization", expanded=not _is_mobile):
-    _utab3d, _utab3, _utab1 = st.tabs(["🌌 3D", "🔭 3-Panel", "🎯 Single View"])
-    with _utab3d:
-        _3d_ck1, _3d_ck2 = st.columns(2)
-        with _3d_ck1:
-            _3d_arrows = st.checkbox("Arrows", key="uni_3d_arrows")
-        with _3d_ck2:
-            _3d_mono = st.checkbox("Monograms", key="uni_3d_mono")
-        _components.html(
-            _build_universe_3d(show_arrows=_3d_arrows, show_mono=_3d_mono, height=820),
-            height=820,
-            scrolling=False,
-        )
-    with _utab3:
-        _uni_cols = st.columns(3)
-        for _ucol, (scen, label) in zip(_uni_cols, SCENARIOS):
-            with _ucol:
-                st.plotly_chart(_build_universe_fig(scen, label), use_container_width=True)
-    with _utab1:
-        _uni_sel = st.radio(
-            "Scenario", ["Left", "Center", "Right"],
-            horizontal=True, key="uni_single_sel",
-            label_visibility="collapsed",
-        )
-        _uni_scen_key = {"Left": "cCon (Left)", "Center": "Center", "Right": "dCon (Right)"}
-        st.plotly_chart(
-            _build_universe_fig(_uni_scen_key[_uni_sel], _uni_sel, height=580),
-            use_container_width=True,
-        )
 
 st.markdown('<div id="throttles"></div>', unsafe_allow_html=True)
 with st.expander("Electron Throttles", expanded=not _is_mobile):
@@ -2278,6 +2100,16 @@ with st.expander("Brains", expanded=False):
 
 st.markdown('<div id="power"></div>', unsafe_allow_html=True)
 with st.expander("Power", expanded=False):
+    _3d_ck1, _3d_ck2 = st.columns(2)
+    with _3d_ck1:
+        _3d_arrows = st.checkbox("Arrows", key="uni_3d_arrows")
+    with _3d_ck2:
+        _3d_mono = st.checkbox("Monograms", key="uni_3d_mono")
+    _components.html(
+        _build_universe_3d(show_arrows=_3d_arrows, show_mono=_3d_mono, height=820),
+        height=820,
+        scrolling=False,
+    )
     st.plotly_chart(fig_pw, use_container_width=True)
     # Per-class per capita power charts
     _npc_defs = [
