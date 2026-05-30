@@ -825,6 +825,7 @@ def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
             "mult_g": round(_pw_g / _pe),
             "mult_p": round(_pw_p / _pe),
             "mult_s": round(_pw_s / _pe),
+            "pe": round(_pe),
         }
 
     max_n_g = max(v["n_g"] for v in scens.values())
@@ -844,11 +845,14 @@ def _build_universe_3d(show_arrows=False, show_mono=False, height=540):
 *{{margin:0;padding:0;box-sizing:border-box}}
 body{{background:#0d1b2a;overflow:hidden;font-family:sans-serif}}
 canvas{{display:block}}
-#lg{{position:absolute;bottom:8px;left:10px;color:#dde;font-size:20px;line-height:2.0;pointer-events:none;
+#lg{{position:absolute;bottom:8px;left:10px;color:#dde;font-size:16px;line-height:1.9;pointer-events:none;
      background:rgba(0,8,20,0.60);border-radius:8px;padding:10px 18px}}
 #lg table{{border-collapse:collapse;width:100%}}
-#lg td.nm{{text-align:left;padding-right:18px}}
-#lg td.xv{{text-align:right;color:#778899}}
+#lg td.nm{{text-align:left;padding-right:14px}}
+#lg td.hd{{text-align:right;padding-left:14px;color:#6688aa;font-size:13px;line-height:1.4;vertical-align:bottom}}
+#lg td.xv{{text-align:right;padding-left:14px;color:#ffffff}}
+#lg td.qt{{text-align:right;padding-left:14px;color:#ffffff}}
+#lg-scale{{margin-top:4px;font-size:13px;color:#556677;text-align:center}}
 #footer{{position:absolute;bottom:8px;right:12px;color:#8899aa;font-size:16px;pointer-events:none;text-align:right;line-height:1.6}}
 #wintitle{{position:absolute;top:6px;left:0;width:100%;text-align:center;color:#aaccee;font-size:18px;font-weight:600;pointer-events:none;z-index:8}}
 #btns{{position:absolute;top:32px;left:50%;transform:translateX(-50%);display:flex;gap:6px;pointer-events:auto;z-index:10}}
@@ -869,11 +873,14 @@ canvas{{display:block}}
 <div id="sb">Bubble Size = $$$ Power &nbsp;|&nbsp; &#9888; Nucleons Thousands &times; Larger IRL</div>
 <button id="fsbtn" onclick="toggleFS()" title="Fullscreen">&#x26F6;</button>
 <div id="lg"><table>
-  <tr><td class="nm" style="color:#aaccee">Electrons</td><td class="xv" id="lg-e">1&times;</td></tr>
-  <tr><td class="nm" style="color:#FFD700">GovNukes</td><td class="xv" id="lg-g"></td></tr>
-  <tr><td class="nm" style="color:#66cc66">Providers</td><td class="xv" id="lg-p"></td></tr>
-  <tr><td class="nm" style="color:#cc4444">SinSayers</td><td class="xv" id="lg-s"></td></tr>
-</table></div>
+  <tr><td class="nm"></td><td class="hd">Size</td><td class="hd">Qty</td><td class="hd">Total</td></tr>
+  <tr><td class="nm" style="color:#aaccee">Electrons</td><td class="xv">1&times;</td><td class="qt">1</td><td class="xv">1&times;</td></tr>
+  <tr><td class="nm" style="color:#FFD700">GovNukes</td><td class="xv" id="lg-g-sz"></td><td class="qt" id="lg-g-qt"></td><td class="xv" id="lg-g-tt"></td></tr>
+  <tr><td class="nm" style="color:#66cc66">Providers</td><td class="xv" id="lg-p-sz"></td><td class="qt" id="lg-p-qt"></td><td class="xv" id="lg-p-tt"></td></tr>
+  <tr><td class="nm" style="color:#cc4444">SinSayers</td><td class="xv" id="lg-s-sz"></td><td class="qt" id="lg-s-qt"></td><td class="xv" id="lg-s-tt"></td></tr>
+</table>
+<div id="lg-scale"></div>
+</div>
 <div id="footer">&copy; 2026 David Burkean &bull; Sharing is caring &bull; Commercial use by permission &bull; All Rights Reserved</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -1038,11 +1045,20 @@ addGroup(D.maxNP,3.0,0.90,D.scens.Left.r_p,0x228B22,'p','P');
 addGroup(D.maxNS,4.2,1.20,D.scens.Left.r_s,0x8B0000,'s','S');
 
 function fmtX(n){{return n.toLocaleString()+'×';}}
+function fmtN(n){{return n.toLocaleString();}}
+function fmtUSD(n){{return '$'+n.toLocaleString();}}
 function updateLegend(name){{
   const sc=D.scens[name];
-  document.getElementById('lg-g').textContent=fmtX(sc.mult_g);
-  document.getElementById('lg-p').textContent=fmtX(sc.mult_p);
-  document.getElementById('lg-s').textContent=fmtX(sc.mult_s);
+  document.getElementById('lg-g-sz').textContent=fmtX(sc.mult_g);
+  document.getElementById('lg-g-qt').textContent=fmtN(sc.n_g);
+  document.getElementById('lg-g-tt').textContent=fmtX(sc.mult_g*sc.n_g);
+  document.getElementById('lg-p-sz').textContent=fmtX(sc.mult_p);
+  document.getElementById('lg-p-qt').textContent=fmtN(sc.n_p);
+  document.getElementById('lg-p-tt').textContent=fmtX(sc.mult_p*sc.n_p);
+  document.getElementById('lg-s-sz').textContent=fmtX(sc.mult_s);
+  document.getElementById('lg-s-qt').textContent=fmtN(sc.n_s);
+  document.getElementById('lg-s-tt').textContent=fmtX(sc.mult_s*sc.n_s);
+  document.getElementById('lg-scale').textContent='1× = '+fmtUSD(sc.pe);
 }}
 updateLegend('Left');
 
