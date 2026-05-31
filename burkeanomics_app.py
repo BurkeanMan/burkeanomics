@@ -212,7 +212,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.81</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.82</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -690,7 +690,7 @@ with st.sidebar.expander("**🏷️ Metadata**", expanded=False):
         except Exception as e:
             st.error(f"Import failed: {e}")
 
-st.sidebar.caption("d2.81")
+st.sidebar.caption("d2.82")
 
 # ====================== CALCULATIONS ======================
 
