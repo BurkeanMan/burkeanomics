@@ -65,17 +65,49 @@ def current_user() -> dict | None:
     return st.session_state.get("sb_user")
 
 
+def is_admin() -> bool:
+    user = current_user()
+    if not user:
+        return False
+    admin_cfg = st.secrets.get("admin", {})
+    admin_emails = admin_cfg.get("emails", [])
+    if isinstance(admin_emails, str):
+        admin_emails = [e.strip() for e in admin_emails.split(",")]
+    return user["email"] in admin_emails
+
+
 # ── Universe CRUD ──────────────────────────────────────────────────────────────
 
 def list_universes() -> list:
     response = (
         get_supabase()
         .table("universes")
-        .select("id, name, updated_at")
+        .select("id, name, updated_at, is_default")
         .order("updated_at", desc=True)
         .execute()
     )
     return response.data or []
+
+
+def get_default_universe() -> dict | None:
+    try:
+        response = (
+            get_supabase()
+            .table("universes")
+            .select("*")
+            .eq("is_default", True)
+            .limit(1)
+            .execute()
+        )
+        return response.data[0] if response.data else None
+    except Exception:
+        return None
+
+
+def set_default_universe(universe_id: str):
+    client = get_supabase()
+    client.table("universes").update({"is_default": False}).eq("is_default", True).execute()
+    client.table("universes").update({"is_default": True}).eq("id", universe_id).execute()
 
 
 def save_universe(name: str, params: dict) -> str | None:

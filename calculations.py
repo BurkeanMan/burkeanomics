@@ -93,10 +93,7 @@ def calculate_en_masse(scen: str):
     for _, r in df_per.iterrows():
         cls = r["Class"]
         population = pop_map.get(cls, hh)
-        if "unthrottled" in cls:
-            total_iq = st.session_state.get("base_iq", 100) * population
-        else:
-            total_iq = r["IQ"] * population
+        total_iq = r["IQ"] * population
         total_power = r["Power ($)"] * population
         rows.append(
             {

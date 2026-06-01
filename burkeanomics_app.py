@@ -15,10 +15,11 @@ from export import (
     render_pdf_with_playwright,
 )
 from supabase_client import (
-    is_logged_in, current_user,
+    is_logged_in, current_user, is_admin,
     sign_in, sign_up, sign_out,
     send_password_reset, update_password,
     list_universes, save_universe, load_universe, delete_universe,
+    get_default_universe, set_default_universe,
 )
 
 # Apply any pending JSON import before widgets are instantiated
@@ -60,6 +61,18 @@ st.set_page_config(
 if st.session_state.get("_init_count", 0) < 2:
     st.session_state["_init_count"] = st.session_state.get("_init_count", 0) + 1
     st.rerun()
+
+# Auto-load the global default universe on first meaningful page load.
+# Skipped if the user has already triggered an import this session.
+if "_global_default_loaded" not in st.session_state:
+    st.session_state["_global_default_loaded"] = True
+    if "_import_pending" not in st.session_state:
+        _def_uni = get_default_universe()
+        if _def_uni:
+            _def_pending = dict(_def_uni["params"])
+            _def_pending["universe_name"] = _def_uni["name"]
+            st.session_state["_import_pending"] = _def_pending
+            st.rerun()
 
 # Detect screen width via JS; sets ?sw=m (mobile) or ?sw=p (tablet/desktop) on first load.
 _sw = st.query_params.get("sw", "p")
@@ -216,7 +229,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.82</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.83</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -322,22 +335,33 @@ if is_logged_in():
     with st.sidebar.expander("💾 My Universes", expanded=False):
         _universes = list_universes()
         if _universes:
-            _uni_map = {u["name"]: u["id"] for u in _universes}
-            _sel_uni = st.selectbox("Saved universes", list(_uni_map.keys()), key="sb_uni_select")
+            _uni_labels = [("✓ " if u.get("is_default") else "") + u["name"] for u in _universes]
+            _label_to_uni = dict(zip(_uni_labels, _universes))
+            _sel_label = st.selectbox("Saved universes", _uni_labels, key="sb_uni_select")
+            _sel_uni_data = _label_to_uni[_sel_label]
+            _sel_uni_id = _sel_uni_data["id"]
+            _sel_uni_name = _sel_uni_data["name"]
             _lc, _dc = st.columns(2)
             with _lc:
                 if st.button("Load", key="sb_uni_load", use_container_width=True):
-                    _loaded = load_universe(_uni_map[_sel_uni])
+                    _loaded = load_universe(_sel_uni_id)
                     if _loaded:
                         _pending = dict(_loaded["params"])
                         _pending["universe_name"] = _loaded["name"]
                         st.session_state["_import_pending"] = _pending
-                        st.session_state["sb_uni_save_name"] = _loaded["name"]
+                        st.session_state["sb_uni_save_name"] = _sel_uni_name
                         st.rerun()
             with _dc:
                 if st.button("Delete", key="sb_uni_delete", use_container_width=True):
-                    delete_universe(_uni_map[_sel_uni])
+                    delete_universe(_sel_uni_id)
                     st.rerun()
+            if is_admin():
+                if _sel_uni_data.get("is_default"):
+                    st.caption("✓ Global default")
+                else:
+                    if st.button("⭐ Set as Default", key="sb_set_default", use_container_width=True):
+                        set_default_universe(_sel_uni_id)
+                        st.rerun()
             st.markdown("---")
         _save_name = st.text_input(
             "Save current universe as",
@@ -694,7 +718,7 @@ with st.sidebar.expander("**🏷️ Metadata**", expanded=False):
         except Exception as e:
             st.error(f"Import failed: {e}")
 
-st.sidebar.caption("d2.82")
+st.sidebar.caption("d2.83")
 
 # ====================== CALCULATIONS ======================
 
