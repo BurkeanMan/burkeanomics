@@ -1,5 +1,5 @@
 import streamlit as st
-import streamlit.components.v1 as _components
+import extra_streamlit_components as stx
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -30,11 +30,22 @@ if "_import_pending" in st.session_state:
     if "universe_name" in _pending:
         st.session_state["sb_uni_save_name"] = _pending["universe_name"]
 
-# ── Cookie-backed auth persistence ────────────────────────────────────────────
-# st.context.cookies reads the browser's cookies from the HTTP request headers —
-# no JS iframe, no URL gymnastics. Works on every page reload automatically.
+_recovery_token   = st.query_params.get("sb_recovery", "")
+_invite_token     = st.query_params.get("sb_invite", "")
+_recovery_refresh = st.query_params.get("sb_refresh", "")
+
+st.set_page_config(
+    page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="collapsed"
+)
+
+# ── Cookie-backed auth persistence (stx.CookieManager) ───────────────────────
+# CookieManager reads/writes cookies entirely client-side via a React component —
+# no dependence on HTTP header forwarding, works reliably on Streamlit Cloud.
+# Needs 2 silent reruns to fully initialize before cookies are readable.
+_cm = stx.CookieManager(key="bsim_cm")
+
 if "sb_user" not in st.session_state:
-    _c_ref = st.context.cookies.get("sb_refresh_token", "")
+    _c_ref = _cm.get("sb_refresh_token") or ""
     if _c_ref:
         try:
             from supabase_client import get_supabase
@@ -47,42 +58,18 @@ if "sb_user" not in st.session_state:
         except Exception:
             st.session_state["_clear_cookies"] = True
 
-_recovery_token   = st.query_params.get("sb_recovery", "")
-_invite_token     = st.query_params.get("sb_invite", "")
-_recovery_refresh = st.query_params.get("sb_refresh", "")
-
-st.set_page_config(
-    page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="collapsed"
-)
-
-# One silent rerun for React hydration.
-if st.session_state.get("_init_count", 0) < 1:
-    st.session_state["_init_count"] = 1
+# Two silent reruns: first for React hydration, second so CookieManager can read cookies.
+if st.session_state.get("_init_count", 0) < 2:
+    st.session_state["_init_count"] = st.session_state.get("_init_count", 0) + 1
     st.rerun()
 
-# Write or clear browser cookies via a component iframe (window.parent.document.cookie).
-# Using _components.html() rather than st.html(unsafe_allow_javascript=True) because
-# the latter silently strips scripts on older Streamlit Cloud builds.
-# SameSite=Lax (not Strict) is required for Streamlit Cloud's proxied environment.
+_cookie_exp = datetime.now() + timedelta(days=30)
 if st.session_state.pop("_write_cookies", False):
-    _exp = (datetime.now() + timedelta(days=30)).strftime("%a, %d %b %Y %H:%M:%S GMT")
-    _tok = st.session_state.get("sb_access_token", "")
-    _ref = st.session_state.get("sb_refresh_token", "")
-    _components.html(
-        f'<script>'
-        f'window.parent.document.cookie="sb_access_token={_tok};path=/;expires={_exp};SameSite=Lax";'
-        f'window.parent.document.cookie="sb_refresh_token={_ref};path=/;expires={_exp};SameSite=Lax";'
-        f'</script>',
-        height=0,
-    )
+    _cm.set("sb_access_token", st.session_state.get("sb_access_token", ""), expires_at=_cookie_exp, key="cm_set_tok")
+    _cm.set("sb_refresh_token", st.session_state.get("sb_refresh_token", ""), expires_at=_cookie_exp, key="cm_set_ref")
 if st.session_state.pop("_clear_cookies", False):
-    _components.html(
-        '<script>'
-        'window.parent.document.cookie="sb_access_token=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;SameSite=Lax";'
-        'window.parent.document.cookie="sb_refresh_token=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;SameSite=Lax";'
-        '</script>',
-        height=0,
-    )
+    _cm.delete("sb_access_token", key="cm_del_tok")
+    _cm.delete("sb_refresh_token", key="cm_del_ref")
 
 # Auto-load the global default universe once auth is confirmed.
 # On Streamlit Cloud, cookie auth resolves after a few reruns, so we wait
