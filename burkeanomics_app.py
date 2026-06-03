@@ -289,7 +289,7 @@ with _ref_col:
 
 # ====================== DEFAULTS ======================
 if "universe_name" not in st.session_state:
-    st.session_state["universe_name"] = "Cal Energy Economy"
+    st.session_state["universe_name"] = ""
 
 _EXPORT_PREFIXES = (
     "th_", "iq_", "b_", "p_", "pop_", "adults_",
