@@ -1,12 +1,10 @@
 import streamlit as st
-import streamlit.components.v1 as _components
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import json
 import math
 from datetime import datetime, timedelta
-import extra_streamlit_components as stx
 from calculations import calculate_per_capita, calculate_en_masse, calculate_breakdown
 from export import (
     build_report_html,
@@ -27,26 +25,26 @@ if "_import_pending" in st.session_state:
     _pending = st.session_state.pop("_import_pending")
     for _k, _v in _pending.items():
         st.session_state[_k] = _v
+    # Keep the save-name input in sync with the loaded universe name
+    if "universe_name" in _pending:
+        st.session_state["sb_uni_save_name"] = _pending["universe_name"]
 
 # ── Cookie-backed auth persistence ────────────────────────────────────────────
-_cm = stx.CookieManager(key="bsim_cm")
-
+# st.context.cookies reads the browser's cookies from the HTTP request headers —
+# no JS iframe, no URL gymnastics. Works on every page reload automatically.
 if "sb_user" not in st.session_state:
-    _c_tok = _cm.get("sb_access_token")
-    _c_ref = _cm.get("sb_refresh_token")
-    if _c_tok and _c_ref:
-        st.session_state["sb_access_token"] = _c_tok
-        st.session_state["sb_refresh_token"] = _c_ref
+    _c_ref = st.context.cookies.get("sb_refresh_token", "")
+    if _c_ref:
         try:
             from supabase_client import get_supabase
-            _r = get_supabase().auth.get_user()
-            if _r and _r.user:
+            _r = get_supabase().auth.refresh_session(_c_ref)
+            if _r and _r.session and _r.user:
+                st.session_state["sb_access_token"] = _r.session.access_token
+                st.session_state["sb_refresh_token"] = _r.session.refresh_token
                 st.session_state["sb_user"] = {"id": _r.user.id, "email": _r.user.email}
+                st.session_state["_write_cookies"] = True
         except Exception:
-            st.session_state.pop("sb_access_token", None)
-            st.session_state.pop("sb_refresh_token", None)
-            _cm.delete("sb_access_token")
-            _cm.delete("sb_refresh_token")
+            st.session_state["_clear_cookies"] = True
 
 _recovery_token   = st.query_params.get("sb_recovery", "")
 _invite_token     = st.query_params.get("sb_invite", "")
@@ -56,11 +54,31 @@ st.set_page_config(
     page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="collapsed"
 )
 
-# Two silent reruns on first load: first for React hydration, second to ensure
-# CookieManager has had a full cycle to read stored auth tokens.
-if st.session_state.get("_init_count", 0) < 2:
-    st.session_state["_init_count"] = st.session_state.get("_init_count", 0) + 1
+# One silent rerun for React hydration.
+if st.session_state.get("_init_count", 0) < 1:
+    st.session_state["_init_count"] = 1
     st.rerun()
+
+# Write or clear browser cookies via inline JS based on auth events.
+if st.session_state.pop("_write_cookies", False):
+    _exp = (datetime.now() + timedelta(days=30)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    _tok = st.session_state.get("sb_access_token", "")
+    _ref = st.session_state.get("sb_refresh_token", "")
+    st.html(
+        f'<script>'
+        f'document.cookie="sb_access_token={_tok};path=/;expires={_exp};SameSite=Strict";'
+        f'document.cookie="sb_refresh_token={_ref};path=/;expires={_exp};SameSite=Strict";'
+        f'</script>',
+        unsafe_allow_javascript=True,
+    )
+if st.session_state.pop("_clear_cookies", False):
+    st.html(
+        '<script>'
+        'document.cookie="sb_access_token=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;SameSite=Strict";'
+        'document.cookie="sb_refresh_token=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;SameSite=Strict";'
+        '</script>',
+        unsafe_allow_javascript=True,
+    )
 
 # Auto-load the global default universe on first meaningful page load.
 # Skipped if the user has already triggered an import this session.
@@ -77,16 +95,17 @@ if "_global_default_loaded" not in st.session_state:
 # Detect screen width via JS; sets ?sw=m (mobile) or ?sw=p (tablet/desktop) on first load.
 _sw = st.query_params.get("sw", "p")
 _is_mobile = _sw == "m"
-_components.html(
+st.html(
     """<script>
 (function() {
+    var url = new URL(window.location.href);
+
     // Mobile detection: set ?sw= query param and redirect once
-    var w = window.parent.innerWidth;
+    var w = window.innerWidth;
     var target = w < 768 ? 'm' : 'p';
-    var url = new URL(window.parent.location.href);
     if (url.searchParams.get('sw') !== target) {
         url.searchParams.set('sw', target);
-        window.parent.location.replace(url.toString());
+        window.location.replace(url.toString());
         return;
     }
 
@@ -99,7 +118,7 @@ _components.html(
         '#population':  'Populations'
     };
     function findDetails(label) {
-        var all = window.parent.document.querySelectorAll('details');
+        var all = document.querySelectorAll('details');
         for (var i = 0; i < all.length; i++) {
             var s = all[i].querySelector('summary');
             if (s && s.textContent.indexOf(label) >= 0) return all[i];
@@ -107,7 +126,7 @@ _components.html(
         return null;
     }
     function scrollToAnchor(id) {
-        var el = window.parent.document.getElementById(id);
+        var el = document.getElementById(id);
         if (el) el.scrollIntoView({behavior: 'smooth'});
     }
     function openExpander(hash, attempt) {
@@ -133,19 +152,19 @@ _components.html(
             scrollToAnchor(hash.slice(1));
         }
     }
-    window.parent.addEventListener('hashchange', function() {
-        setTimeout(function() { openExpander(window.parent.location.hash); }, 80);
+    window.addEventListener('hashchange', function() {
+        setTimeout(function() { openExpander(window.location.hash); }, 80);
     });
 
     // Supabase puts auth tokens in the hash fragment for recovery and invite flows.
     // Convert to query params so Streamlit can read them, then strip the hash.
     (function() {
-        var h = window.parent.location.hash;
+        var h = window.location.hash;
         if (!h) return;
         var p = new URLSearchParams(h.slice(1));
         var type = p.get('type'), at = p.get('access_token'), rt = p.get('refresh_token') || '';
         if (!at) return;
-        var u = new URL(window.parent.location.href);
+        var u = new URL(window.location.href);
         u.hash = '';
         u.searchParams.set('sb_refresh', rt);
         if (type === 'recovery') {
@@ -153,11 +172,11 @@ _components.html(
         } else if (type === 'invite') {
             u.searchParams.set('sb_invite', at);
         }
-        window.parent.location.replace(u.toString());
+        window.location.replace(u.toString());
     })();
 })();
 </script>""",
-    height=0,
+    unsafe_allow_javascript=True,
 )
 
 # ── Invite form (shown when user arrives via Supabase invite email) ────────────
@@ -191,9 +210,7 @@ if _invite_token:
                 update_password(_invite_token, _recovery_refresh, _np1)
                 try:
                     sign_in(_invite_email, _np1)
-                    _cookie_exp = datetime.now() + timedelta(days=30)
-                    _cm.set("sb_access_token", st.session_state["sb_access_token"], expires_at=_cookie_exp)
-                    _cm.set("sb_refresh_token", st.session_state["sb_refresh_token"], expires_at=_cookie_exp)
+                    st.session_state["_write_cookies"] = True
                     st.query_params.clear()
                     st.rerun()
                 except Exception:
@@ -229,7 +246,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.83</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.85</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -301,19 +318,16 @@ with st.sidebar.expander("🔐 Account", expanded=not is_logged_in()):
     if is_logged_in():
         st.caption(f"Signed in as **{current_user()['email']}**")
         if st.button("Sign Out", key="sb_signout"):
-            _cm.delete("sb_access_token")
-            _cm.delete("sb_refresh_token")
             sign_out()
+            st.session_state["_clear_cookies"] = True
             st.rerun()
     else:
         _sb_email = st.text_input("Email", key="sb_email")
         _sb_pw = st.text_input("Password", type="password", key="sb_pw")
-        _cookie_exp = datetime.now() + timedelta(days=30)
         if st.button("Sign In", key="sb_signin_btn"):
             try:
                 sign_in(_sb_email, _sb_pw)
-                _cm.set("sb_access_token", st.session_state["sb_access_token"], expires_at=_cookie_exp)
-                _cm.set("sb_refresh_token", st.session_state["sb_refresh_token"], expires_at=_cookie_exp)
+                st.session_state["_write_cookies"] = True
                 st.rerun()
             except Exception as _e:
                 st.error(f"Sign in failed: {_e}")
@@ -363,9 +377,13 @@ if is_logged_in():
                         set_default_universe(_sel_uni_id)
                         st.rerun()
             st.markdown("---")
+        # Reset save field whenever the loaded universe changes
+        _cur_uni_name = st.session_state.get("universe_name", "")
+        if st.session_state.get("_last_uni_name") != _cur_uni_name:
+            st.session_state["_last_uni_name"] = _cur_uni_name
+            st.session_state["sb_uni_save_name"] = _cur_uni_name
         _save_name = st.text_input(
             "Save current universe as",
-            value=st.session_state.get("universe_name", ""),
             key="sb_uni_save_name",
         )
         if st.button("💾 Save", key="sb_uni_save", use_container_width=True):
@@ -373,8 +391,10 @@ if is_logged_in():
                 _params = {k: v for k, v in st.session_state.items()
                            if k.startswith(_EXPORT_PREFIXES)}
                 _params["universe_name"] = _save_name.strip()
-                save_universe(_save_name.strip(), _params)
+                _old_name = st.session_state.get("universe_name", "")
+                save_universe(_save_name.strip(), _params, old_name=_old_name)
                 st.session_state["universe_name"] = _save_name.strip()
+                st.session_state["_last_uni_name"] = _save_name.strip()
                 st.success(f"Saved '{_save_name.strip()}'")
             else:
                 st.error("Enter a name first.")
@@ -680,10 +700,6 @@ with st.sidebar.expander("**🏷️ Metadata**", expanded=False):
     st.text_input(
         "Universe Name", placeholder="e.g. Cal Energy Economy", key="universe_name"
     )
-    st.text_area(
-        "Description", placeholder="Describe this universe's scenario and assumptions...",
-        key="universe_desc", height=100
-    )
 
     st.markdown("---")
     # Export
@@ -718,7 +734,7 @@ with st.sidebar.expander("**🏷️ Metadata**", expanded=False):
         except Exception as e:
             st.error(f"Import failed: {e}")
 
-st.sidebar.caption("d2.83")
+st.sidebar.caption("d2.85")
 
 # ====================== CALCULATIONS ======================
 
@@ -810,6 +826,31 @@ st.markdown(
     "<style>section[data-testid='stMain'] details summary p { font-weight:600; font-size:0.95rem; } section[data-testid='stSidebar'] div[data-testid='stNumberInput'] label { text-align:center; display:block; width:100%; }</style>",
     unsafe_allow_html=True,
 )
+with st.expander("📋 Overview of this Target Universe", expanded=False):
+    _desc_val = st.session_state.get("universe_desc", "")
+    if is_logged_in():
+        st.text_area(
+            "",
+            placeholder="Describe this universe's scenario, assumptions, and goals…",
+            key="universe_desc",
+            height=160,
+            label_visibility="collapsed",
+        )
+        if st.button("💾 Save Universe", key="overview_save_btn"):
+            _ov_name = st.session_state.get("universe_name", "").strip()
+            if _ov_name:
+                _ov_params = {k: v for k, v in st.session_state.items()
+                              if k.startswith(_EXPORT_PREFIXES)}
+                _ov_params["universe_name"] = _ov_name
+                save_universe(_ov_name, _ov_params, old_name=_ov_name)
+                st.success(f"Saved '{_ov_name}'")
+            else:
+                st.error("No universe name set — save from the sidebar first.")
+    else:
+        if _desc_val:
+            st.markdown(_desc_val)
+        else:
+            st.caption("No overview provided for this universe.")
 st.markdown(
     "<div style='display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 14px 0;font-size:14px;font-weight:600;justify-content:center;'>"
     "<a href='#throttles' style='color:#1155cc;text-decoration:none;'>Throttles</a>"
@@ -2157,10 +2198,9 @@ with st.expander("Power", expanded=False):
         _3d_arrows = st.checkbox("Arrows", key="uni_3d_arrows")
     with _3d_ck2:
         _3d_mono = st.checkbox("Monograms", key="uni_3d_mono")
-    _components.html(
+    st.iframe(
         _build_universe_3d(show_arrows=_3d_arrows, show_mono=_3d_mono, height=820),
         height=820,
-        scrolling=False,
     )
     st.plotly_chart(fig_pw, use_container_width=True)
     # Per-class per capita power charts

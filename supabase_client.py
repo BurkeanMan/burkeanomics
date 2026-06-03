@@ -110,15 +110,35 @@ def set_default_universe(universe_id: str):
     client.table("universes").update({"is_default": True}).eq("id", universe_id).execute()
 
 
-def save_universe(name: str, params: dict) -> str | None:
-    """Upsert a universe by name for the current user. Returns the universe id."""
+def save_universe(name: str, params: dict, old_name: str | None = None) -> str | None:
+    """Upsert a universe by name for the current user. Returns the universe id.
+
+    If old_name differs from name, the existing universe row is renamed in-place
+    so its is_default flag and id are preserved.
+    """
     client = get_supabase()
     user_id = current_user()["id"]
+
+    # Rename path: find the old row and update its name + params
+    if old_name and old_name.strip() and old_name.strip() != name.strip():
+        old_row = (
+            client.table("universes")
+            .select("id")
+            .eq("user_id", user_id)
+            .eq("name", old_name.strip())
+            .execute()
+        )
+        if old_row.data:
+            uid = old_row.data[0]["id"]
+            client.table("universes").update({"name": name.strip(), "params": params}).eq("id", uid).execute()
+            return uid
+
+    # Upsert by new name (create or overwrite existing)
     existing = (
         client.table("universes")
         .select("id")
         .eq("user_id", user_id)
-        .eq("name", name)
+        .eq("name", name.strip())
         .execute()
     )
     if existing.data:
@@ -127,7 +147,7 @@ def save_universe(name: str, params: dict) -> str | None:
         return uid
     response = (
         client.table("universes")
-        .insert({"user_id": user_id, "name": name, "params": params})
+        .insert({"user_id": user_id, "name": name.strip(), "params": params})
         .execute()
     )
     return response.data[0]["id"] if response.data else None
