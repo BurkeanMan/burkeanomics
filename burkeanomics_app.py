@@ -59,25 +59,28 @@ if st.session_state.get("_init_count", 0) < 1:
     st.session_state["_init_count"] = 1
     st.rerun()
 
-# Write or clear browser cookies via inline JS based on auth events.
+# Write or clear browser cookies via a component iframe (window.parent.document.cookie).
+# Using _components.html() rather than st.html(unsafe_allow_javascript=True) because
+# the latter silently strips scripts on older Streamlit Cloud builds.
+# SameSite=Lax (not Strict) is required for Streamlit Cloud's proxied environment.
 if st.session_state.pop("_write_cookies", False):
     _exp = (datetime.now() + timedelta(days=30)).strftime("%a, %d %b %Y %H:%M:%S GMT")
     _tok = st.session_state.get("sb_access_token", "")
     _ref = st.session_state.get("sb_refresh_token", "")
-    st.html(
+    _components.html(
         f'<script>'
-        f'document.cookie="sb_access_token={_tok};path=/;expires={_exp};SameSite=Strict";'
-        f'document.cookie="sb_refresh_token={_ref};path=/;expires={_exp};SameSite=Strict";'
+        f'window.parent.document.cookie="sb_access_token={_tok};path=/;expires={_exp};SameSite=Lax";'
+        f'window.parent.document.cookie="sb_refresh_token={_ref};path=/;expires={_exp};SameSite=Lax";'
         f'</script>',
-        unsafe_allow_javascript=True,
+        height=0,
     )
 if st.session_state.pop("_clear_cookies", False):
-    st.html(
+    _components.html(
         '<script>'
-        'document.cookie="sb_access_token=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;SameSite=Strict";'
-        'document.cookie="sb_refresh_token=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;SameSite=Strict";'
+        'window.parent.document.cookie="sb_access_token=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;SameSite=Lax";'
+        'window.parent.document.cookie="sb_refresh_token=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;SameSite=Lax";'
         '</script>',
-        unsafe_allow_javascript=True,
+        height=0,
     )
 
 # Auto-load the global default universe once auth is confirmed.
