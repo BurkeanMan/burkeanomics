@@ -65,11 +65,17 @@ if st.session_state.get("_init_count", 0) < 2:
 
 _cookie_exp = datetime.now() + timedelta(days=30)
 if st.session_state.pop("_write_cookies", False):
-    _cm.set("sb_access_token", st.session_state.get("sb_access_token", ""), expires_at=_cookie_exp)
-    _cm.set("sb_refresh_token", st.session_state.get("sb_refresh_token", ""), expires_at=_cookie_exp)
+    try:
+        _cm.set("sb_access_token", st.session_state.get("sb_access_token", ""), expires_at=_cookie_exp)
+        _cm.set("sb_refresh_token", st.session_state.get("sb_refresh_token", ""), expires_at=_cookie_exp)
+    except Exception:
+        pass
 if st.session_state.pop("_clear_cookies", False):
-    _cm.delete("sb_access_token")
-    _cm.delete("sb_refresh_token")
+    try:
+        _cm.delete("sb_access_token")
+        _cm.delete("sb_refresh_token")
+    except Exception:
+        pass
 
 # Auto-load the global default universe once auth is confirmed.
 # Primary: find default via list_universes() (proven to work on Cloud, user-scoped).
