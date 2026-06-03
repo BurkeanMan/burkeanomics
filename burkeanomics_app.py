@@ -77,26 +77,28 @@ if st.session_state.pop("_clear_cookies", False):
     except Exception:
         pass
 
-# Auto-load the global default universe once auth is confirmed.
-# Primary: find default via list_universes() (proven to work on Cloud, user-scoped).
-# Fallback: get_default_universe() direct query (works when "read global default" RLS policy is active).
-if "_global_default_loaded" not in st.session_state and is_logged_in():
+# Auto-load the global default universe on first meaningful page load.
+# Fires for both anonymous and logged-in visitors; anon access requires the
+# "anon can read global default" RLS policy on the universes table.
+# Primary path: get_default_universe() (targeted is_default query).
+# Fallback: list_universes() scan (user-scoped, works when logged in).
+if "_global_default_loaded" not in st.session_state:
     st.session_state["_global_default_loaded"] = True
     if "_import_pending" not in st.session_state:
         try:
             _def_pending = None
-            _unis = list_universes()
-            _def_meta = next((u for u in _unis if u.get("is_default")), None)
-            if _def_meta:
-                _full = load_universe(_def_meta["id"])
-                if _full:
-                    _def_pending = dict(_full["params"])
-                    _def_pending["universe_name"] = _def_meta["name"]
-            if _def_pending is None:
-                _def_uni = get_default_universe()
-                if _def_uni:
-                    _def_pending = dict(_def_uni["params"])
-                    _def_pending["universe_name"] = _def_uni["name"]
+            _def_uni = get_default_universe()
+            if _def_uni:
+                _def_pending = dict(_def_uni["params"])
+                _def_pending["universe_name"] = _def_uni["name"]
+            if _def_pending is None and is_logged_in():
+                _unis = list_universes()
+                _def_meta = next((u for u in _unis if u.get("is_default")), None)
+                if _def_meta:
+                    _full = load_universe(_def_meta["id"])
+                    if _full:
+                        _def_pending = dict(_full["params"])
+                        _def_pending["universe_name"] = _def_meta["name"]
             if _def_pending is not None:
                 st.session_state["_import_pending"] = _def_pending
                 st.rerun()
@@ -339,6 +341,7 @@ with st.sidebar.expander("🔐 Account", expanded=not is_logged_in()):
             try:
                 sign_in(_sb_email, _sb_pw)
                 st.session_state["_write_cookies"] = True
+                st.session_state.pop("_global_default_loaded", None)
                 st.rerun()
             except Exception as _e:
                 st.error(f"Sign in failed: {_e}")
