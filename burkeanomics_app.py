@@ -80,9 +80,11 @@ if st.session_state.pop("_clear_cookies", False):
         unsafe_allow_javascript=True,
     )
 
-# Auto-load the global default universe on first meaningful page load.
-# Skipped if the user has already triggered an import this session.
-if "_global_default_loaded" not in st.session_state:
+# Auto-load the global default universe once auth is confirmed.
+# On Streamlit Cloud, cookie auth resolves after a few reruns, so we wait
+# until is_logged_in() is True before attempting — and only set the flag
+# on success or confirmed-empty, so we don't lock out a later retry.
+if "_global_default_loaded" not in st.session_state and is_logged_in():
     st.session_state["_global_default_loaded"] = True
     if "_import_pending" not in st.session_state:
         _def_uni = get_default_universe()
