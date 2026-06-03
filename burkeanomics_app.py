@@ -65,25 +65,37 @@ if st.session_state.get("_init_count", 0) < 2:
 
 _cookie_exp = datetime.now() + timedelta(days=30)
 if st.session_state.pop("_write_cookies", False):
-    _cm.set("sb_access_token", st.session_state.get("sb_access_token", ""), expires_at=_cookie_exp, key="cm_set_tok")
-    _cm.set("sb_refresh_token", st.session_state.get("sb_refresh_token", ""), expires_at=_cookie_exp, key="cm_set_ref")
+    _cm.set("sb_access_token", st.session_state.get("sb_access_token", ""), expires_at=_cookie_exp)
+    _cm.set("sb_refresh_token", st.session_state.get("sb_refresh_token", ""), expires_at=_cookie_exp)
 if st.session_state.pop("_clear_cookies", False):
-    _cm.delete("sb_access_token", key="cm_del_tok")
-    _cm.delete("sb_refresh_token", key="cm_del_ref")
+    _cm.delete("sb_access_token")
+    _cm.delete("sb_refresh_token")
 
 # Auto-load the global default universe once auth is confirmed.
-# On Streamlit Cloud, cookie auth resolves after a few reruns, so we wait
-# until is_logged_in() is True before attempting — and only set the flag
-# on success or confirmed-empty, so we don't lock out a later retry.
+# Primary: find default via list_universes() (proven to work on Cloud, user-scoped).
+# Fallback: get_default_universe() direct query (works when "read global default" RLS policy is active).
 if "_global_default_loaded" not in st.session_state and is_logged_in():
     st.session_state["_global_default_loaded"] = True
     if "_import_pending" not in st.session_state:
-        _def_uni = get_default_universe()
-        if _def_uni:
-            _def_pending = dict(_def_uni["params"])
-            _def_pending["universe_name"] = _def_uni["name"]
-            st.session_state["_import_pending"] = _def_pending
-            st.rerun()
+        try:
+            _def_pending = None
+            _unis = list_universes()
+            _def_meta = next((u for u in _unis if u.get("is_default")), None)
+            if _def_meta:
+                _full = load_universe(_def_meta["id"])
+                if _full:
+                    _def_pending = dict(_full["params"])
+                    _def_pending["universe_name"] = _def_meta["name"]
+            if _def_pending is None:
+                _def_uni = get_default_universe()
+                if _def_uni:
+                    _def_pending = dict(_def_uni["params"])
+                    _def_pending["universe_name"] = _def_uni["name"]
+            if _def_pending is not None:
+                st.session_state["_import_pending"] = _def_pending
+                st.rerun()
+        except Exception:
+            pass
 
 # Detect screen width via JS; sets ?sw=m (mobile) or ?sw=p (tablet/desktop) on first load.
 _sw = st.query_params.get("sw", "p")
