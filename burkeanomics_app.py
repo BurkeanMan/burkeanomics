@@ -1,5 +1,5 @@
 import streamlit as st
-import extra_streamlit_components as stx
+import streamlit.components.v1 as _components
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -38,14 +38,11 @@ st.set_page_config(
     page_title="Burkeanomics Simulator", layout="wide", initial_sidebar_state="collapsed"
 )
 
-# ── Cookie-backed auth persistence (stx.CookieManager) ───────────────────────
-# CookieManager reads/writes cookies entirely client-side via a React component —
-# no dependence on HTTP header forwarding, works reliably on Streamlit Cloud.
-# Needs 2 silent reruns to fully initialize before cookies are readable.
-_cm = stx.CookieManager(key="bsim_cm")
-
+# ── Cookie-backed auth persistence (st.context.cookies) ──────────────────────
+# st.context.cookies reads browser cookies from HTTP request headers — no extra
+# package needed. Writes/clears use _components.html() with a tiny JS snippet.
 if "sb_user" not in st.session_state:
-    _c_ref = _cm.get("sb_refresh_token") or ""
+    _c_ref = st.context.cookies.get("sb_refresh_token", "")
     if _c_ref:
         try:
             from supabase_client import get_supabase
@@ -58,40 +55,40 @@ if "sb_user" not in st.session_state:
         except Exception:
             st.session_state["_clear_cookies"] = True
 
-# Two silent reruns: first for React hydration, second so CookieManager can read cookies.
-if st.session_state.get("_init_count", 0) < 2:
-    st.session_state["_init_count"] = st.session_state.get("_init_count", 0) + 1
+# One silent rerun for React hydration.
+if st.session_state.get("_init_count", 0) < 1:
+    st.session_state["_init_count"] = 1
     st.rerun()
 
-_cookie_exp = datetime.now() + timedelta(days=30)
 if st.session_state.pop("_write_cookies", False):
-    try:
-        _cm.set("sb_access_token", st.session_state.get("sb_access_token", ""), expires_at=_cookie_exp)
-        _cm.set("sb_refresh_token", st.session_state.get("sb_refresh_token", ""), expires_at=_cookie_exp)
-    except Exception:
-        pass
+    _exp = (datetime.now() + timedelta(days=30)).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    _tok = st.session_state.get("sb_access_token", "")
+    _ref = st.session_state.get("sb_refresh_token", "")
+    _components.html(
+        f'<script>'
+        f'window.parent.document.cookie="sb_access_token={_tok};path=/;expires={_exp};SameSite=Lax";'
+        f'window.parent.document.cookie="sb_refresh_token={_ref};path=/;expires={_exp};SameSite=Lax";'
+        f'</script>',
+        height=0,
+    )
 if st.session_state.pop("_clear_cookies", False):
-    try:
-        _cm.delete("sb_access_token")
-        _cm.delete("sb_refresh_token")
-    except Exception:
-        pass
+    _components.html(
+        '<script>'
+        'window.parent.document.cookie="sb_access_token=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;SameSite=Lax";'
+        'window.parent.document.cookie="sb_refresh_token=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT;SameSite=Lax";'
+        '</script>',
+        height=0,
+    )
 
 # Auto-load the global default universe on first meaningful page load.
-# Fires for both anonymous and logged-in visitors; anon access requires the
-# "anon can read global default" RLS policy on the universes table.
-# Primary path: get_default_universe() (targeted is_default query).
-# Fallback: list_universes() scan (user-scoped, works when logged in).
+# Logged-in: primary path is list_universes() (user-scoped, full params).
+# Anonymous / no user default: fall back to get_default_universe() (global).
 if "_global_default_loaded" not in st.session_state:
     st.session_state["_global_default_loaded"] = True
     if "_import_pending" not in st.session_state:
         try:
             _def_pending = None
-            _def_uni = get_default_universe()
-            if _def_uni:
-                _def_pending = dict(_def_uni["params"])
-                _def_pending["universe_name"] = _def_uni["name"]
-            if _def_pending is None and is_logged_in():
+            if is_logged_in():
                 _unis = list_universes()
                 _def_meta = next((u for u in _unis if u.get("is_default")), None)
                 if _def_meta:
@@ -99,6 +96,11 @@ if "_global_default_loaded" not in st.session_state:
                     if _full:
                         _def_pending = dict(_full["params"])
                         _def_pending["universe_name"] = _def_meta["name"]
+            if _def_pending is None:
+                _def_uni = get_default_universe()
+                if _def_uni:
+                    _def_pending = dict(_def_uni["params"])
+                    _def_pending["universe_name"] = _def_uni["name"]
             if _def_pending is not None:
                 st.session_state["_import_pending"] = _def_pending
                 st.rerun()
@@ -259,7 +261,7 @@ st.title("🧠 Burkeanomics Simulator")
 _ver_col, _gen_col, _dl_col, _ref_col = st.columns([2, 1, 1, 3])
 with _ver_col:
     st.markdown(
-        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.85</p>",
+        "<p style='font-size:14px; font-weight:600; color:#555; margin-top:8px;'>Burkeanomics Simulator d2.86</p>",
         unsafe_allow_html=True,
     )
 with _gen_col:
@@ -748,7 +750,7 @@ with st.sidebar.expander("**🏷️ Metadata**", expanded=False):
         except Exception as e:
             st.error(f"Import failed: {e}")
 
-st.sidebar.caption("d2.85")
+st.sidebar.caption("d2.86")
 
 # ====================== CALCULATIONS ======================
 
