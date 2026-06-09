@@ -292,7 +292,7 @@ with _ref_col:
     with st.expander("References"):
         st.markdown(
             "• [Bcon 300 — Burkean Economics](https://www.bnation.us/econ-300-burkean-economics)  \n"
-            "• [Bcon 301 — Particle Physics Model of Socionomic Systems](https://www.bnation.us/econ-301)  \n"
+            "• [Bcon 301 — Burkeanomic Ontology](https://www.bnation.us/econ-301)  \n"
             "• [Bcon 302 — BrainPower Charts](https://www.bnation.us/302-bp-charts)  \n"
             "• [Bcon 304 — Human Dualities](https://www.bnation.us/304-human-dualities)"
         )
